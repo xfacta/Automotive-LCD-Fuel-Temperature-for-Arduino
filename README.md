@@ -34,8 +34,8 @@
 
 ### Uses 
 
-This is a cheap ILI9481 480 x 320 LCD display that happens to suppot the portrate format I've chosen.
-Not all displays do support portrate and there might be quite some rework of X Y coordinates to use a different display in lnadscape mode.
+This is a cheap ILI9481 480 x 320 LCD display that happens to suppot the portrait format I've chosen.
+Not all displays do support portrait and there might be quite some rework of X Y coordinates to use a different display in lnadscape mode.
 
 https://www.auselectronicsdirect.com.au/3.2-inch-lcd-screen-shield-for-arduino-mega
 
