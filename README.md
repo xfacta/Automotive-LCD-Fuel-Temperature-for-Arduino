@@ -1,6 +1,7 @@
 # Automotive LCD Fuel Temperature for Arduino
 ## Fuel and temperature gauge with other warnings
 
+- AT Mega2560 and 3.5" 320x480 LCD display
 - Fuel Level barmeter with litres indication
 - Temperature barmeter with degrees celcius indication
 - Voltage indication
@@ -14,9 +15,14 @@
 - Shiflight Neopixel LED output
 - Last LED for status, or whole strip for oil pressure warning
 - Offloaded sounds to external Leonardo Tiny
+
 - Using Nissan SR20 temperature gauge sensor by default (NOT the coolant sensor for the ECU)
   - DS18B20 onewire temperature sensor support commented out
   - normal NTC resistor sensor support commended out
+  
+- Fuel level input is set for Datsun 1600 standard sender
+  - approx 8ohm to 80ohm in 45 litre tank
+  - needs some input circuitry to give a good usable voltage swing
 
 - Can use one analog pin for all headlight input via resistor ladder
   - commented out, but can be used if required
