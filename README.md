@@ -29,6 +29,9 @@
   - Parkers = 1.8v , Low Beam = 2.7v , High Beam = 4.2v
 
 
+![Fuel-Temp](https://user-images.githubusercontent.com/41600026/235334865-11315358-4a72-44a8-93c0-82f2b89d5b6b.PNG)
+
+
 ### Uses 
 
 This is a cheap ILI9481 480 x 320 LCD display that happens to suppot the portrate format I've chosen.
