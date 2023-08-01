@@ -15,6 +15,8 @@
 - Shiflight Neopixel LED output
 - Last LED for status, or whole strip for oil pressure warning
 - Offloaded sounds to external Leonardo Tiny
+- Uses multimap instead of formulas for temperature and fuel level
+- Dummy analog reads discarded before real read to allow ADC to settle
 
 - Using Nissan SR20 temperature gauge sensor by default (NOT the coolant sensor for the ECU)
   - DS18B20 onewire temperature sensor support commented out
@@ -24,10 +26,6 @@
   - approx 8ohm to 80ohm in 45 litre tank
   - needs some input circuitry to give a good usable voltage swing
 
-- Can use one analog pin for all headlight input via resistor ladder
-  - commented out, but can be used if required
-  - Parkers = 1.8v , Low Beam = 2.7v , High Beam = 4.2v
-
 
 ![Fuel-Temp](https://user-images.githubusercontent.com/41600026/235334865-11315358-4a72-44a8-93c0-82f2b89d5b6b.PNG)
 
@@ -35,7 +33,7 @@
 ### Uses 
 
 This is a cheap ILI9481 480 x 320 LCD display that happens to suppot the portrait format I've chosen.
-Not all displays do support portrait and there might be quite some rework of X Y coordinates to use a different display in lnadscape mode.
+Not all displays do support portrait and there might be quite some rework of X Y coordinates to use a different display in landscape mode.
 
 https://www.auselectronicsdirect.com.au/3.2-inch-lcd-screen-shield-for-arduino-mega
 
@@ -43,28 +41,41 @@ https://www.auselectronicsdirect.com.au/3.2-inch-lcd-screen-shield-for-arduino-m
 ### It is required to check and adjust
 
 ```
-Fan_On_Hyst = 20000;        // msec hysteresis, minimum time the fan will stay on
-Fan_On_Temp = 89;           // degrees C fan on
-Alert_Temp = 98;            // degrees C alert level
-Warning_Fuel = 10;          // remaining fuel warning level
-Volts_Low = 133;            // low volts warning level x10
-Volts_High = 144;           // high volts warning level x10
-Bad_Oil_Press = LOW;        // set whether the oil pressure sensor is Low or High for Bad
+int Fan_On_Hyst = 20000;         // msec Hysteresis, minimum run time of fan
+const int Fan_On_Temp = 89;      // degrees C fan on
+const int Alert_Temp = 98;       // degrees C alert level
+const int Low_Temp = 71;         // degree C for low temperatures
+const int Volts_Low = 133;       // low volts warning level x10
+const int Volts_High = 144;      // high volts warning level x10
+const bool Bad_Oil_Press = LOW;  // set whether the oil pressure sensor is Low or High for Bad
+const bool Valid_Warning = LOW;  // set high or low for valid warnings to be passed to external processing
+const bool Fan_On = HIGH;        // set high or low for operating the fan relay
 
-vcc_ref = 4.92;             // measure the 5 volts DC and set it here
-R1 = 1200.0;                // measure and set the voltage divider values
-R2 = 3300.0;                // for accurate voltage measurements
+const float vcc_ref = 4.92;  // measure the Arduino 5 volts DC and set it here
+const float R1 = 1200.0;     // measure and set the voltage divider values
+const float R2 = 3300.0;     // for accurate voltage measurements
 
-LED_Count = 8;              // set the length of the NeoPixel shiftlight strip
-LED_Dim = 10;               // low brightness level
-LED_Bright = 80;            // high brightness level
+int LED_Count = 8;  // set the length of the NeoPixel shiftlight strip
+const int LED_Dim = 10;
+const int LED_Bright = 80;
+```
+
+The multimap calibration data must be gathered using Calibration mode, and raw values noted alongside corresponding real-world values
+Example -
+Arduino analogRead values for temp_cal_in[]
+Measured temperature values for temp_cal_out[]
+```
+// SR20 temp sender Celcius
+const int temp_sample_size = 11;
+int temp_cal_in[] = { 15, 20, 25, 30, 33, 44, 61, 85, 109, 198, 332 };
+int temp_cal_out[] = { 120, 108, 100, 94, 90, 80, 70, 60, 53, 36, 22 };
 ```
 
 The range of RPM on the neopixel strip is dictated by the PWM output and settings on the RPM module (another Arduino)
 
 ### You can also set
 - `Demo_Mode` = true or false for display of random values
-- `Calibration_Mode` = true or false for display of some raw data like input frequency in Hz
+- `Calibration_Mode` = true or false for display of some raw analogRead data
 
 Pressing the button at any time also toggles calibration mode or normal mode.
 Some debouncing in hardware is assumed.
