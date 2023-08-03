@@ -6,8 +6,9 @@
 - Temperature barmeter with degrees celcius indication
 - Voltage indication
 - Oil Pressure warning
-- Fuel range warning and fan control
-- Alternator warning, requires 2nd voltage input
+- Fuel range warning
+- Fan control
+- Alternator warning, uses a 2nd voltage input
 - Dim on low-beam
 - Headlights indication
 - Unified warning message area
@@ -15,7 +16,7 @@
 - Shiflight Neopixel LED output
 - Last LED for status, or whole strip for oil pressure warning
 - Offloaded sounds to external Leonardo Tiny
-- Uses multimap instead of formulas for temperature and fuel level
+- Uses multimap instead of formulas for temperature and fuel level calibration
 - Dummy analog reads discarded before real read to allow ADC to settle
 
 - Using Nissan SR20 temperature gauge sensor by default (NOT the coolant sensor for the ECU)
@@ -59,11 +60,17 @@ int LED_Count = 8;  // set the length of the NeoPixel shiftlight strip
 const int LED_Dim = 10;
 const int LED_Bright = 80;
 ```
+These may need modification if the temperature or fuel range changes significantly
+```
+const int Meter_Max = 360;
+const int Meter_Min = 0;
+```
 
 The multimap calibration data must be gathered using Calibration mode, and raw values noted alongside corresponding real-world values
 Example -
-Arduino analogRead values for temp_cal_in[]
-Measured temperature values for temp_cal_out[]
+- Arduino analogRead values in temp_cal_in[]
+- Measured temperature values in temp_cal_out[]
+- remember to set the sample size value
 ```
 // SR20 temp sender Celcius
 const int temp_sample_size = 11;
@@ -76,6 +83,7 @@ The range of RPM on the neopixel strip is dictated by the PWM output and setting
 ### You can also set
 - `Demo_Mode` = true or false for display of random values
 - `Calibration_Mode` = true or false for display of some raw analogRead data
+- `Debug_Mode` = true or false for serial output of some data
 
 Pressing the button at any time also toggles calibration mode or normal mode.
 Some debouncing in hardware is assumed.
