@@ -349,6 +349,7 @@ void setup() {
   // remove "PULLUP" after testing
   pinMode(Oil_Press_Pin, INPUT_PULLUP);
   pinMode(Parker_Light_Pin, INPUT);
+  digitalWrite(Parker_Light_Pin, LOW);  // comment this out after testing
   pinMode(Low_Beam_Pin, INPUT);
   pinMode(High_Beam_Pin, INPUT);
   pinMode(RPM_PWM_In_Pin, INPUT);
@@ -477,7 +478,7 @@ void loop() {
     Headlight_Status();
     Display_Warning_Text();
     Check_Button();
-     if (Demo_Mode == true) ShiftLight_Strip();
+    if (Demo_Mode == true) ShiftLight_Strip();
 
     Short_Loop_Time = millis();
   }  // end short loop
@@ -1129,8 +1130,12 @@ void Headlight_Status() {
 
   // Using individual digital inputs
   // get all the current headlight inputs
-  if (digitalRead(Parker_Light_Pin) == LOW) Light_Status = Lights_Off;
-  if (digitalRead(Parker_Light_Pin) == HIGH) Light_Status = Lights_Park;
+  // the parker lights input is disabled during demo mode due to sensitivity
+  if (Demo_Mode = true) Light_Status = Lights_Off;
+  else {
+    if (digitalRead(Parker_Light_Pin) == LOW) Light_Status = Lights_Off;
+    if (digitalRead(Parker_Light_Pin) == HIGH) Light_Status = Lights_Park;
+  }
   if (digitalRead(Low_Beam_Pin) == HIGH) Light_Status = Lights_Low;
   if (digitalRead(High_Beam_Pin) == HIGH) Light_Status = Lights_High;
 
