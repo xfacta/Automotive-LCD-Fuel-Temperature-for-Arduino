@@ -349,7 +349,6 @@ void setup() {
   // remove "PULLUP" after testing
   pinMode(Oil_Press_Pin, INPUT_PULLUP);
   pinMode(Parker_Light_Pin, INPUT);
-  digitalWrite(Parker_Light_Pin, LOW);  // comment this out after testing
   pinMode(Low_Beam_Pin, INPUT);
   pinMode(High_Beam_Pin, INPUT);
   pinMode(RPM_PWM_In_Pin, INPUT);
