@@ -18,7 +18,7 @@
 
 
 
-#define Version "Fuel Temp Bar V15"
+#define Version "Fuel Temp Bar V16"
 
 
 
@@ -146,6 +146,8 @@ int Block_Fill_Colour = METER_GREY;  // or VGA_BLACK
 //   50cm (20")   4K7       3K3
 //  100cm (3'4")  3K3       2K2
 //  200cm (6'8")  2K2       1K0
+//
+// A result of 127 degrees indicates a sensor error
 //
 //#include <OneWire.h>
 //#include <DS18B20.h>
@@ -280,7 +282,7 @@ const int Fuel_Max = fuel_cal_out[0];
 const int Temp_Min = temp_cal_out[temp_sample_size - 1];
 const int Temp_Max = temp_cal_out[0];
 
-// remaining fuel warning level
+// Low fuel warning level
 const int Warning_Fuel = (Fuel_Max - Fuel_Min) / 4;
 
 // **********************************************************************************
@@ -320,7 +322,7 @@ uint32_t LED_Colour[] = { 0x000000, 0xFF0000, 0xFF3F00, 0xFF7F00, 0xFFBF00, 0xFF
 void setup() {
 
 
-  if (Debug_Mode == true) Serial.begin(9600);
+  if (Debug_Mode) Serial.begin(9600);
 
   analogReference(DEFAULT);
 
@@ -424,10 +426,10 @@ void setup() {
   LED_Count = LED_Count - 1;
 
   // Check - cant have both modes at once
-  if (Calibration_Mode == true) Demo_Mode = false;
-  if (Demo_Mode == true) Fan_On_Hyst = Fan_On_Hyst / 3;
+  if (Calibration_Mode) Demo_Mode = false;
+  if (Demo_Mode) Fan_On_Hyst = Fan_On_Hyst / 3;
 
-  if (Debug_Mode == true) {
+  if (Debug_Mode) {
     Serial.print("Fuel_Min ");
     Serial.println(Fuel_Min);
     Serial.print("Fuel_Max ");
@@ -466,7 +468,7 @@ void loop() {
   // =======================================================
 
   Check_Oil();
-  if (Demo_Mode == false) ShiftLight_Strip();
+  if (!Demo_Mode) ShiftLight_Strip();
 
 
   // =======================================================
@@ -477,7 +479,7 @@ void loop() {
     Headlight_Status();
     Display_Warning_Text();
     Check_Button();
-    if (Demo_Mode == true) ShiftLight_Strip();
+    if (Demo_Mode) ShiftLight_Strip();
 
     Short_Loop_Time = millis();
   }  // end short loop
@@ -492,12 +494,12 @@ void loop() {
     Update_Fuel();
     Update_Temp();
     Update_Dim_Status();
-    if (Calibration_Mode == false) Control_Fan();
+    if (!Calibration_Mode) Control_Fan();
 
     // More than one long loop completed so change startup flag
-    if (Startup_Mode == true) Startup_Mode = false;
+    if (Startup_Mode) Startup_Mode = false;
 
-    if (Debug_Mode == true) {
+    if (Debug_Mode) {
       Serial.print("Calibration Mode ");
       Serial.println(Calibration_Mode);
     }
@@ -522,15 +524,16 @@ void Check_Button() {
 
   // Toggle the calibration mode
   // delay allows for debounce
-  if (Startup_Mode == false) {
+  if (!Startup_Mode) {
     if (digitalRead(Button_Pin) == LOW) {
-      delay(100);
-      if (digitalRead(Button_Pin) == LOW) {
-        Calibration_Mode = !Calibration_Mode;
+      delay(10);
+      while (digitalRead(Button_Pin) == LOW) {
+        // just wait until button released
+        Calibration_Mode = true;
       }
     }
   }
-  if (Calibration_Mode == true) Demo_Mode = false;
+  if (Calibration_Mode) Demo_Mode = false;
 
 
 }  // End void Check_Button
@@ -601,7 +604,8 @@ void Update_Fuel() {
   Dummy = analogRead(Fuel_Pin);  // do a read and ignore it, allowing the true value to settle
   Raw_Value = analogRead(Fuel_Pin);
 
-  if (Calibration_Mode == true)  // show raw calibration values
+  if (Calibration_Mode)
+  // show raw calibration values
   {
     Fuel_Litres = Raw_Value;
     the_string = String(Fuel_Litres);
@@ -614,7 +618,7 @@ void Update_Fuel() {
     my_lcd.Print_String(the_string, Fuel_Bar_X - 30, Fuel_Bar_Y - (Bar_Height / 2));
   }
 
-  if (Demo_Mode == true) {
+  if (Demo_Mode) {
     // ----------------- FOR TESTING -----------------
     //Fuel_Litres = 20;
     Fuel_Litres = 22 + random(0, 25) - random(0, 25);
@@ -622,7 +626,7 @@ void Update_Fuel() {
     // -----------------------------------------------
   }
 
-  if (Demo_Mode == false && Calibration_Mode == false) {
+  if (!Demo_Mode && !Calibration_Mode) {
     // ----------------- FOR REAL -----------------
 
     // Fuel level formula for standard Datsun 1600 tank sender
@@ -637,7 +641,7 @@ void Update_Fuel() {
     // -----------------------------------------------
   }
 
-  if (Calibration_Mode == false) {
+  if (!Calibration_Mode) {
     // Limit the change between readings
     // to combat fuel sloshing
     Fuel_Litres = (Fuel_Litres + Last_Fuel_Litres) / 2;
@@ -688,7 +692,8 @@ void Update_Temp() {
   Dummy = analogRead(Temp_Pin);
   Raw_Value = analogRead(Temp_Pin);
 
-  if (Calibration_Mode == true)  // show raw calibration values
+  if (Calibration_Mode)
+  // show raw calibration values
   {
     /*
       // Using DS8B20 for temperature
@@ -711,7 +716,7 @@ void Update_Temp() {
     my_lcd.Print_String(the_string, Temp_Bar_X + Bar_Width - 30, Temp_Bar_Y - (Bar_Height / 2));
   }
 
-  if (Demo_Mode == true) {
+  if (Demo_Mode) {
     // ----------------- FOR TESTING -----------------
     //Temp_Celsius = 15;
     Temp_Celsius = 80 + random(0, 30) - random(0, 30);
@@ -719,7 +724,7 @@ void Update_Temp() {
     // -----------------------------------------------
   }
 
-  if (Demo_Mode == false && Calibration_Mode == false) {
+  if (!Demo_Mode && !Calibration_Mode) {
     // ----------------- FOR REAL -----------------
     // Comment or uncomment different sections here
     // for different sensors
@@ -747,19 +752,20 @@ void Update_Temp() {
     // ----------------- End real measurement ------
   }
 
-  if (Calibration_Mode == false) {
+  if (!Calibration_Mode) {
     // Draw temperature meter
     new_val = map(Temp_Celsius, Temp_Min, Temp_Max, Meter_Min, Meter_Max);
     Bar_Meter(new_val, Meter_Min, Meter_Max, Temp_Bar_X, Temp_Bar_Y, Bar_Width, Bar_Height, BLUE2RED);
 
     // Change text colours depending on temperature
+    if (Status_Priority == 5) Status_Priority = 0;
     Warn_Text_Colour = METER_WHITE;
     if (Temp_Celsius < Low_Temp || Temp_Celsius >= Fan_On_Temp) Warn_Text_Colour = METER_YELLOW;
     if (Temp_Celsius >= Alert_Temp) {
       Status_Priority = 5;
       Status_Change_Time = millis();
       Warn_Text_Colour = METER_RED;
-    } else if (Status_Priority == 5) Status_Priority = 0;
+    }
 
     // Print value using warning text colour
     the_string = String(Temp_Celsius);
@@ -797,7 +803,7 @@ void Control_Fan() {
     // ensure the relay is on
     digitalWrite(Relay_Pin, Fan_On);
     Fan_On_Time = millis();
-    Status_Priority = 3;
+    if (Status_Priority != 5) Status_Priority = 3;
     Status_Change_Time = millis();
   }
 
@@ -828,21 +834,10 @@ void Check_Voltages() {
   Dummy = analogRead(Alternator_Pin);
   Raw_Alternator_Volts = analogRead(Alternator_Pin);
 
-  if (Calibration_Mode == true)
-  // show raw calibration values
-  {
-    Battery_Volts = Raw_Battery_Volts;
-    the_string = String(Battery_Volts);
-    if (Battery_Volts < 10) the_string = the_string + " ";
-    if (Battery_Volts < 100) the_string = the_string + " ";
-    if (Battery_Volts < 1000) the_string = the_string + " ";
-    my_lcd.Set_Text_Back_colour(METER_BLACK);
-    my_lcd.Set_Text_Size(2);
-    my_lcd.Set_Text_colour(METER_WHITE);
-    my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
-  }
+  // Use raw calibration values
+  if (Calibration_Mode) Battery_Volts = Raw_Battery_Volts;
 
-  if (Demo_Mode == true) {
+  if (Demo_Mode) {
     // ----------------- FOR TESTING -----------------
     //Battery_Volts = 138;
     Battery_Volts = 140 + random(0, 20) - random(0, 20);
@@ -850,17 +845,18 @@ void Check_Voltages() {
     // -----------------------------------------------
   }
 
-  if (Demo_Mode == false && Calibration_Mode == false) {
+  if (!Demo_Mode && !Calibration_Mode) {
     // ----------------- FOR REAL -----------------
     // all volts here multiplied by 10 so it can still be used in integer form
     // and divided by 10 for display with 2 decimal places
     Battery_Volts = round(Raw_Battery_Volts * Input_Multiplier * 10.0);
     Alternator_Volts = round(Raw_Alternator_Volts * Input_Multiplier * 10.0);
     // -----------------------------------------------
+    Battery_Volts = constrain(Battery_Volts, 80, 160);
+    Alternator_Volts = constrain(Alternator_Volts, 60, 160);
   }
 
-  Battery_Volts = constrain(Battery_Volts, 80, 160);
-  Alternator_Volts = constrain(Alternator_Volts, 70, 160);
+
 
   if ((millis() - Status_Change_Time) > (Long_Loop_Interval * 2)) {
     // wait until other warnings have had a chance to be displayed
@@ -907,68 +903,73 @@ void Display_Warning_Text() {
 
   my_lcd.Set_Text_Size(4);
 
-  switch (Status_Priority) {
-    // start of the switch statement
-    // in reverse order so highest priority is executed first
-    case 6:
-      // Bad oil pressue
-      digitalWrite(OP_Warning_Pin, Valid_Warning);
-      my_lcd.Set_Text_colour(METER_RED);
-      my_lcd.Set_Text_Back_colour(METER_YELLOW);
-      my_lcd.Print_String("   OIL  ", Status_Text_X, Status_Text_Y);
-      break;
-    case 5:
-      // Over temperature
-      digitalWrite(OP_Warning_Pin, Valid_Warning);
-      my_lcd.Set_Text_colour(METER_RED);
-      my_lcd.Set_Text_Back_colour(METER_BLACK);
-      my_lcd.Print_String("  TEMP  ", Status_Text_X - 8, Status_Text_Y);
-      break;
-    case 4:
-      // Low fuel
-      digitalWrite(Warning_Pin, Valid_Warning);
-      my_lcd.Set_Text_colour(METER_CYAN);
-      my_lcd.Set_Text_Back_colour(METER_BLACK);
-      my_lcd.Print_String("  FUEL  ", Status_Text_X, Status_Text_Y);
-      break;
-    case 3:
-      // Fan is on
-      my_lcd.Set_Text_colour(METER_MAGENTA);
-      my_lcd.Set_Text_Back_colour(METER_BLACK);
-      my_lcd.Print_String(" FAN ON ", Status_Text_X, Status_Text_Y);
-      break;
-    case 2:
-      // Bad alternator
-      digitalWrite(Warning_Pin, !Valid_Warning);
-      my_lcd.Set_Text_colour(METER_ORANGE);
-      my_lcd.Set_Text_Back_colour(METER_BLACK);
-      my_lcd.Print_String(" CHARGE ", Status_Text_X, Status_Text_Y);
-      break;
-    case 1:
-      // Low voltage
-      digitalWrite(Warning_Pin, Valid_Warning);
-      my_lcd.Set_Text_colour(METER_YELLOW);
-      my_lcd.Set_Text_Back_colour(METER_BLACK);
-      the_string = " " + String((float(Battery_Volts) / 10.0), 1) + " v  ";
-      if (Battery_Volts < 100) the_string = " " + the_string;
-      my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
-      break;
-    case 0:
-      // All good
-      // unset warning sound pins
-      digitalWrite(Warning_Pin, !Valid_Warning);
-      digitalWrite(OP_Warning_Pin, !Valid_Warning);
-      my_lcd.Set_Text_colour(Text_Colour2);
-      my_lcd.Set_Text_Back_colour(METER_BLACK);
-      the_string = " " + String((float(Battery_Volts) / 10.0), 1) + " v  ";
-      my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
-      break;
-      //default:
-      // unset warning sound pins and nothing else
-      digitalWrite(Warning_Pin, !Valid_Warning);
-      digitalWrite(OP_Warning_Pin, !Valid_Warning);
-      break;
-  }  // the end of the switch statement.
+  if (Calibration_Mode) {
+    my_lcd.Set_Text_colour(METER_WHITE);
+    my_lcd.Set_Text_Back_colour(METER_BLACK);
+    the_string = String(Battery_Volts) + "     ";
+    my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
+  } else {
+    switch (Status_Priority) {
+      // start of the switch statement
+      // in reverse order so highest priority is executed first
+      case 6:
+        // Bad oil pressue
+        digitalWrite(OP_Warning_Pin, Valid_Warning);
+        my_lcd.Set_Text_colour(METER_RED);
+        my_lcd.Set_Text_Back_colour(METER_YELLOW);
+        my_lcd.Print_String("   OIL  ", Status_Text_X, Status_Text_Y);
+        break;
+      case 5:
+        // Over temperature
+        digitalWrite(OP_Warning_Pin, Valid_Warning);
+        my_lcd.Set_Text_colour(METER_RED);
+        my_lcd.Set_Text_Back_colour(METER_BLACK);
+        my_lcd.Print_String("  TEMP! ", Status_Text_X - 8, Status_Text_Y);
+        break;
+      case 4:
+        // Low fuel
+        digitalWrite(Warning_Pin, Valid_Warning);
+        my_lcd.Set_Text_colour(METER_CYAN);
+        my_lcd.Set_Text_Back_colour(METER_BLACK);
+        my_lcd.Print_String("  FUEL  ", Status_Text_X, Status_Text_Y);
+        break;
+      case 3:
+        // Fan is on
+        my_lcd.Set_Text_colour(METER_MAGENTA);
+        my_lcd.Set_Text_Back_colour(METER_BLACK);
+        my_lcd.Print_String(" FAN ON ", Status_Text_X, Status_Text_Y);
+        break;
+      case 2:
+        // Bad alternator
+        digitalWrite(Warning_Pin, !Valid_Warning);
+        my_lcd.Set_Text_colour(METER_ORANGE);
+        my_lcd.Set_Text_Back_colour(METER_BLACK);
+        my_lcd.Print_String(" CHARGE ", Status_Text_X, Status_Text_Y);
+        break;
+      case 1:
+        // Low voltage
+        digitalWrite(Warning_Pin, Valid_Warning);
+        my_lcd.Set_Text_colour(METER_YELLOW);
+        my_lcd.Set_Text_Back_colour(METER_BLACK);
+        the_string = " " + String((float(Battery_Volts) / 10.0), 1) + " v  ";
+        if (Battery_Volts < 100) the_string = " " + the_string;
+        my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
+        break;
+      case 0:
+        // All good
+        // unset warning sound pins
+        digitalWrite(Warning_Pin, !Valid_Warning);
+        digitalWrite(OP_Warning_Pin, !Valid_Warning);
+        my_lcd.Set_Text_colour(Text_Colour2);
+        my_lcd.Set_Text_Back_colour(METER_BLACK);
+        the_string = " " + String((float(Battery_Volts) / 10.0), 1) + " v  ";
+        my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
+        break;
+        default:
+        // dont do anything
+        break;
+    }  // the end of the switch statement.
+  }
 
 
 }  // end void Display_Warning_Text
@@ -985,10 +986,10 @@ void ShiftLight_Strip() {
   // =======================================================
 
   // Set low brightness if headlights are on
-  if (Dim_Mode == true) strip.setBrightness(LED_Dim);
+  if (Dim_Mode) strip.setBrightness(LED_Dim);
   else strip.setBrightness(LED_Bright);
 
-  if (Demo_Mode == true) {
+  if (Demo_Mode) {
     // ----------------- FOR TESTING -----------------
     Old_PWM_duty = PWM_duty;
     PWM_duty = random(-200, 120);
@@ -1095,7 +1096,7 @@ void ShiftLight_Strip() {
   // Send the updated pixel info to the hardware
   strip.show();
 
-  if (Debug_Mode == true) {
+  if (Debug_Mode) {
     Serial.print("PWM_duty ");
     Serial.println(PWM_duty);
     Serial.print("LED_pos ");
@@ -1130,60 +1131,68 @@ void Headlight_Status() {
   // Using individual digital inputs
   // get all the current headlight inputs
   // the parker lights input is disabled during demo mode due to sensitivity
-  if (Demo_Mode = true) Light_Status = Lights_Off;
-  else {
-    if (digitalRead(Parker_Light_Pin) == LOW) Light_Status = Lights_Off;
-    if (digitalRead(Parker_Light_Pin) == HIGH) Light_Status = Lights_Park;
-  }
-  if (digitalRead(Low_Beam_Pin) == HIGH) Light_Status = Lights_Low;
-  if (digitalRead(High_Beam_Pin) == HIGH) Light_Status = Lights_High;
+  if (Calibration_Mode) {
+    my_lcd.Set_Draw_color(METER_GREY);
+    my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
+    my_lcd.Set_Text_Size(4);
+    my_lcd.Set_Text_colour(METER_WHITE);
+    my_lcd.Set_Text_Back_colour(METER_GREY);
+    my_lcd.Print_String("CALIBR", Light_Status_X + 22, Light_Status_Y + 12);
+  } else {
+    if (Demo_Mode) Light_Status = Lights_Off;
+    else {
+      if (digitalRead(Parker_Light_Pin) == LOW) Light_Status = Lights_Off;
+      if (digitalRead(Parker_Light_Pin) == HIGH) Light_Status = Lights_Park;
+    }
+    if (digitalRead(Low_Beam_Pin) == HIGH) Light_Status = Lights_Low;
+    if (digitalRead(High_Beam_Pin) == HIGH) Light_Status = Lights_High;
 
-  // Draw the lights indicator
-  // Only overwrite it if there has been a change
-  if (Light_Status != Light_Last_Status) {
-    switch (Light_Status) {  // start of the switch statement
-      case Lights_NotChanged:
-        // do nothing
-        break;
-      case Lights_Off:
-        my_lcd.Set_Draw_color(METER_GREY);
-        my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
-        my_lcd.Set_Text_Size(4);
-        my_lcd.Set_Text_colour(METER_BLACK);
-        my_lcd.Set_Text_Back_colour(METER_GREY);
-        my_lcd.Print_String("LIGHTS", Light_Status_X + 22, Light_Status_Y + 12);
-        break;
-      case Lights_Park:
-        my_lcd.Set_Draw_color(METER_YELLOW);
-        my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
-        my_lcd.Set_Text_Size(4);
-        my_lcd.Set_Text_colour(METER_BLACK);
-        my_lcd.Set_Text_Back_colour(METER_YELLOW);
-        my_lcd.Print_String("PARK", Light_Status_X + 50, Light_Status_Y + 12);
-        break;
-      case Lights_Low:
-        my_lcd.Set_Draw_color(METER_GREEN);
-        my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
-        my_lcd.Set_Text_Size(4);
-        my_lcd.Set_Text_colour(METER_BLACK);
-        my_lcd.Set_Text_Back_colour(METER_GREEN);
-        my_lcd.Print_String("LOW", Light_Status_X + 60, Light_Status_Y + 12);
-        break;
-      case Lights_High:
-        my_lcd.Set_Draw_color(METER_BLUE);
-        my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
-        my_lcd.Set_Text_Size(4);
-        my_lcd.Set_Text_colour(METER_BLACK);
-        my_lcd.Set_Text_Back_colour(METER_BLUE);
-        my_lcd.Print_String("HIGH", Light_Status_X + 50, Light_Status_Y + 12);
-        break;
-      default:
-        // do nothing
-        break;
-    }  // the end of the switch statement.
+    // Draw the lights indicator
+    // Only overwrite it if there has been a change
+    if (Light_Status != Light_Last_Status) {
+      switch (Light_Status) {  // start of the switch statement
+        case Lights_NotChanged:
+          // do nothing
+          break;
+        case Lights_Off:
+          my_lcd.Set_Draw_color(METER_GREY);
+          my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
+          my_lcd.Set_Text_Size(4);
+          my_lcd.Set_Text_colour(METER_BLACK);
+          my_lcd.Set_Text_Back_colour(METER_GREY);
+          my_lcd.Print_String("LIGHTS", Light_Status_X + 22, Light_Status_Y + 12);
+          break;
+        case Lights_Park:
+          my_lcd.Set_Draw_color(METER_YELLOW);
+          my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
+          my_lcd.Set_Text_Size(4);
+          my_lcd.Set_Text_colour(METER_BLACK);
+          my_lcd.Set_Text_Back_colour(METER_YELLOW);
+          my_lcd.Print_String("PARK", Light_Status_X + 50, Light_Status_Y + 12);
+          break;
+        case Lights_Low:
+          my_lcd.Set_Draw_color(METER_GREEN);
+          my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
+          my_lcd.Set_Text_Size(4);
+          my_lcd.Set_Text_colour(METER_BLACK);
+          my_lcd.Set_Text_Back_colour(METER_GREEN);
+          my_lcd.Print_String("LOW", Light_Status_X + 60, Light_Status_Y + 12);
+          break;
+        case Lights_High:
+          my_lcd.Set_Draw_color(METER_BLUE);
+          my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
+          my_lcd.Set_Text_Size(4);
+          my_lcd.Set_Text_colour(METER_BLACK);
+          my_lcd.Set_Text_Back_colour(METER_BLUE);
+          my_lcd.Print_String("HIGH", Light_Status_X + 50, Light_Status_Y + 12);
+          break;
+        default:
+          // do nothing
+          break;
+      }  // the end of the switch statement.
+    }
+    Light_Last_Status = Light_Status;
   }
-  Light_Last_Status = Light_Status;
-
 
 }  // end void Headlight_Status
 
@@ -1209,7 +1218,7 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
     int y2 = y - g - b * g;
 
     if (v > 0 && b <= v) {
-      if (Dim_Mode == false) {
+      if (!Dim_Mode) {
         // Choose colour from scheme
         block_colour = 0;
         switch (scheme) {
