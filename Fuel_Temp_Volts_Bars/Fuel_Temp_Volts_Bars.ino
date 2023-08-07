@@ -304,14 +304,17 @@ const int Meter_Min = 0;
 */
 
 // NeoPixel shiftlight variables
-int PWM_high, PWM_low, PWM_duty, Old_PWM_duty, LED_pos;
+int PWM_high, PWM_low, PWM_duty, LED_pos;
+// For demo PWM values
+int Old_PWM_duty;
+bool Count_Up = true;
 
 // Create a colour scheme for number of LEDs
 // with off (0) as the first value
 // INVERSE HSV blue/light blue/white
 // uint32_t LED_Colour[] = {0x000000, 0x0000FF, 0x284BFF, 0x508AFF, 0x78BBFF, 0xA0DFFF, 0xC8F5FF, 0xF0FFFF, 0xFFFFFF};
 // RGB red/orange/yellow/white
-uint32_t LED_Colour[] = { 0x000000, 0xFF0000, 0xFF3F00, 0xFF7F00, 0xFFBF00, 0xFFFF00, 0xFFFF55, 0xFFFFAA, 0xFFFFFF };
+uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFFD470, 0xFFE9B8, 0xFFFFFF, 0xFFFFFF };
 // INVERSE HSV green/yellow/white
 // uint32_t LED_Colour[] = {0x000000, 0x00FF00, 0x05FFD6, 0x0A59FF, 0x8A0FFF, 0xFF14AC, 0xFF4519, 0xF8FF1F, 0xFFFFFF};
 
@@ -965,7 +968,7 @@ void Display_Warning_Text() {
         the_string = " " + String((float(Battery_Volts) / 10.0), 1) + " v  ";
         my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
         break;
-        default:
+      default:
         // dont do anything
         break;
     }  // the end of the switch statement.
@@ -991,10 +994,18 @@ void ShiftLight_Strip() {
 
   if (Demo_Mode) {
     // ----------------- FOR TESTING -----------------
-    Old_PWM_duty = PWM_duty;
-    PWM_duty = random(-200, 120);
+    //Old_PWM_duty = PWM_duty;
+    if (Count_Up && PWM_duty < 110) {
+      PWM_duty = PWM_duty + 10;
+      if (PWM_duty > 100) Count_Up = !Count_Up;
+    }
+    if (!Count_Up && PWM_duty > -20) {
+      PWM_duty = PWM_duty - 10;
+      if (PWM_duty <= -10) Count_Up = !Count_Up;
+    }
+    //PWM_duty = random(-200, 120);
     //PWM_duty = 10;
-    PWM_duty = constrain(PWM_duty, Old_PWM_duty - 50, Old_PWM_duty + 50);
+    //PWM_duty = constrain(PWM_duty, Old_PWM_duty - 50, Old_PWM_duty + 50);
     // -----------------------------------------------
   } else {
     // ----------------- FOR REAL -----------------
@@ -1062,27 +1073,27 @@ void ShiftLight_Strip() {
     case 5:
       // Over temperature
       // Set end LED to red
-      strip.fill(0xFF0000, LED_Count, LED_Count);
+      strip.fill(0xBF0000, LED_Count, LED_Count);
       break;
     case 4:
       // Fuel Low
       // Set end LED to cyan
-      strip.fill(0x00FFFF, LED_Count, LED_Count);
+      strip.fill(0x30CFCF, LED_Count, LED_Count);
       break;
     case 3:
       // Fan on
-      // Set end LED to magenta
-      strip.fill(0xFF00FF, LED_Count, LED_Count);
+      // Set end LED to dark magenta
+      strip.fill(0x690069, LED_Count, LED_Count);
       break;
     case 2:
       // Alternator fault
-      // Set end LED to orange
-      strip.fill(0xFF5500, LED_Count, LED_Count);
+      // Set end LED to dark orange
+      strip.fill(0xCF4C00, LED_Count, LED_Count);
       break;
     case 1:
       // Bad voltage
       // Set end LED to yellow
-      strip.fill(0xFFFF00, LED_Count, LED_Count);
+      strip.fill(0xBDBD00, LED_Count, LED_Count);
       break;
     case 0:
       // nothing wrong
