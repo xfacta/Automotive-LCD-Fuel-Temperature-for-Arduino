@@ -186,31 +186,31 @@ int Block_Fill_Colour = METER_GREY;  // or VGA_BLACK
 const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 
 // Common pin definitions
-const int SD_Select = 53;
+#define SD_Select 53
 
 // Pin definitions for digital inputs
 // pin 14 used for onewire sensor if present
-const int Oil_Press_Pin = 0;     // Oil pressure digital input pin
-const int Parker_Light_Pin = 1;  // Parker lights digital input pin
-const int Low_Beam_Pin = 2;      // Low beam digital input pin
-const int High_Beam_Pin = 3;     // High beam digital input pin
-//const int Pbrake_Input_Pin = 4;           // Park brake input pin
-//const int VSS_Input_Pin = 5;              // Speed frequency input pin
-//const int RPM_Input_Pin = 6;              // RPM frequency input pin
-const int RPM_PWM_In_Pin = 6;  // Input PWM signal representing RPM
-const int Button_Pin = 7;      // Button momentary input
+#define Oil_Press_Pin 0     // Oil pressure digital input pin
+#define Parker_Light_Pin 1  // Parker lights digital input pin
+#define Low_Beam_Pin 2      // Low beam digital input pin
+#define High_Beam_Pin 3     // High beam digital input pin
+#define Pbrake_Input_Pin 4  // Park brake input pin
+#define VSS_Input_Pin 5     // Speed frequency input pin
+#define RPM_Input_Pin 6     // RPM frequency input pin
+#define RPM_PWM_In_Pin 6    // Input PWM signal representing RPM
+#define Button_Pin 7        // Button momentary input
 
 // Pin definitions for analog inputs
-const int Temp_Pin = A0;        // Temperature analog input pin - not used with OneWire sensor
-const int Fuel_Pin = A1;        // Fuel level analog input pin
-const int Batt_Volt_Pin = A2;   // Voltage analog input pin
-const int Alternator_Pin = A3;  // Alternator indicator analog input pin
+#define Temp_Pin A0        // Temperature analog input pin - not used with OneWire sensor
+#define Fuel_Pin A1        // Fuel level analog input pin
+#define Batt_Volt_Pin A2   // Voltage analog input pin
+#define Alternator_Pin A3  // Alternator indicator analog input pin
 
 // Pin definitions for outputs
-const int LED_Pin = 10;         // NeoPixel LED pin
-const int Warning_Pin = 11;     // Link to external Leonardo for general warning sounds
-const int OP_Warning_Pin = 12;  // Link to external Leonardo for oil pressure warning sound
-const int Relay_Pin = 13;       // Relay for fan control
+#define LED_Pin 10         // NeoPixel LED pin
+#define Warning_Pin 11     // Link to external Leonardo for general warning sounds
+#define OP_Warning_Pin 12  // Link to external Leonardo for oil pressure warning sound
+#define Relay_Pin 13       // Relay for fan control
 
 // Define the NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_Count, LED_Pin, NEO_GRB + NEO_KHZ800);
