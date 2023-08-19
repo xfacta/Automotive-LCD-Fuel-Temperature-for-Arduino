@@ -24,6 +24,8 @@
 
 //========================== Set These Manually ==========================
 
+const bool Use_DS18B20 = true;  // set true for using Onewire DS18B20 temperature sensor
+
 int Fan_On_Hyst = 20000;         // msec Hysteresis, minimum run time of fan
 const int Fan_On_Temp = 89;      // degrees C fan on
 const int Alert_Temp = 98;       // degrees C alert level
@@ -38,10 +40,10 @@ const float vcc_ref = 4.92;  // measure the 5 volts DC and set it here
 const float R1 = 1200.0;     // measure and set the voltage divider values
 const float R2 = 3300.0;     // for accurate voltage measurements
 
+// The range of RPM on the neopixel strip is dictated by the output from the RPM module
 int LED_Count = 8;  // set the length of the NeoPixel shiftlight strip
 const int LED_Dim = 10;
 const int LED_Bright = 80;
-// The range of RPM on the neopixel strip is dictated by the output from the RPM module
 
 //========================================================================
 
@@ -59,8 +61,6 @@ bool Debug_Mode = false;
 
 
 
-#include <MultiMap.h>
-
 //================== Multimap calibration table ==========================
 // Use calbration mode and measured real values to populate the arrays
 // measure a real value and record matching the arduino calibration value
@@ -71,6 +71,8 @@ bool Debug_Mode = false;
 // Input array must have increasing values of the analog input
 // Output array is the converted human readable value
 // Output is constrained to the range of values in the arrays
+
+#include <MultiMap.h>
 
 // Datsun fuel tank sender Litres
 const int fuel_sample_size = 10;
@@ -87,12 +89,35 @@ int temp_cal_out[] = { 120, 108, 100, 94, 90, 80, 70, 60, 53, 36, 20 };
 //int temp_cal_in[] = { 89, 107, 128, 152, 177, 203, 228, 250, 269, 284, 296 };
 //int temp_cal_out[] = { 120, 110, 100, 90, 80, 70, 60, 50, 40, 30, 20 };
 
-// DSDS18B20 range Celcius
-//const int temp_sample_size = 2;
-//int temp_cal_out[] = { 120, 20 };
-
 //========================================================================
 
+
+//================= Using DS8B20 temperature sesnor ======================
+// -10°C to +85°C ±0.5°C
+// -30°C to +100°C ±1°C
+// -55°C to +125°C ±2°C
+// Pullup Resistor guide
+//  Length       5.0 Volt  3.3 Volt
+//   10cm (4")    10K0      6K8
+//   20cm (8")    8K2       4K7
+//   50cm (20")   4K7       3K3
+//  100cm (3'4")  3K3       2K2
+//  200cm (6'8")  2K2       1K0
+//
+// A result of -127 degrees indicates a sensor error
+//
+// The DS18B20_INT library is a minimalistic library for a DS18B20 sensor
+// and will give only temperatures in whole degrees C
+//
+// Comment out if not used to save memory
+//
+#include <OneWire.h>
+#include <DS18B20_INT.h>
+#define ONE_WIRE_BUS 14  // Specify the OneWire bus pin
+OneWire oneWire(ONE_WIRE_BUS);
+DS18B20_INT sensor(&oneWire);
+
+//========================================================================
 
 
 #include <Adafruit_NeoPixel.h>
@@ -135,26 +160,7 @@ int Text_Colour1 = METER_WHITE;      // or VGA_SILVER
 int Text_Colour2 = METER_LIGHTGREY;  // or VGA_GRAY
 int Block_Fill_Colour = METER_GREY;  // or VGA_BLACK
 
-// Using DS8B20 for coolant temperature
-// -10°C to +85°C ±0.5°C
-// -30°C to +100°C ±1°C
-// -55°C to +125°C ±2°C
-// Pullup Resistor guide
-//  Length       5.0 Volt  3.3 Volt
-//   10cm (4")    10K0      6K8
-//   20cm (8")    8K2       4K7
-//   50cm (20")   4K7       3K3
-//  100cm (3'4")  3K3       2K2
-//  200cm (6'8")  2K2       1K0
-//
-// A result of 127 degrees indicates a sensor error
-//
-//#include <OneWire.h>
-//#include <DS18B20.h>
-//#define ONE_WIRE_BUS 14                // Specify the OneWire bus pin
-//OneWire oneWire(ONE_WIRE_BUS);
-//DS18B20 sensor(&oneWire);
-//DeviceAddress da;
+
 
 /*
   analogReference(DEFAULT);
@@ -249,6 +255,7 @@ const uint32_t Short_Loop_Interval = 1000;  // 1 second between more important l
 uint32_t Long_Loop_Time, Short_Loop_Time;
 uint32_t Fan_On_Time, Status_Change_Time;
 bool Startup_Mode = true;
+bool Missing_DS18B20 = false;
 
 // Position of entire display area
 const int LCD_Offset_X = 40;
@@ -300,7 +307,7 @@ const int Meter_Min = 0;
   Fuel:
   new_val = map(value, 0, 45, 0, 360)
   Temp:
-  new_val = map(value, 30, 120, 0, 360)
+  new_val = map(value, 20, 120, 0, 360)
 */
 
 // NeoPixel shiftlight variables
@@ -323,6 +330,7 @@ uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFF
 
 
 void setup() {
+
 
 
   if (Debug_Mode) Serial.begin(9600);
@@ -375,12 +383,10 @@ void setup() {
   my_lcd.Print_String(Version, CENTER, LCD_Offset_Y + 160);
   delay(2000);
 
-  /*
-    // Using DS8B20 for temperature
-    // set to 9bit resolution x.5 C
-    sensor.begin();
-    if (!sensor.getAddress(da))
-    {
+  // Using DS8B20 for temperature
+  if (Use_DS18B20) {
+    if (!sensor.begin()) {
+      Missing_DS18B20 = true;
       // Display warning for missing DS8B20 sensor
       my_lcd.Fill_Screen(METER_BLACK);
       my_lcd.Set_Text_colour(METER_YELLOW);
@@ -389,12 +395,8 @@ void setup() {
       my_lcd.Print_String("TEMP", CENTER, LCD_Offset_Y + 140);
       my_lcd.Print_String("SENSOR", CENTER, LCD_Offset_Y + 180);
       delay(10000);
-    }
-    else
-    {
-      sensor.setResolution(9);
-    }
-  */
+    } else Missing_DS18B20 = false;
+  }
 
   // Display static text
   my_lcd.Fill_Screen(METER_BLACK);
@@ -691,22 +693,21 @@ void Update_Temp() {
   // Get the Temperature and display it
   // =======================================================
 
-  // read the analog pin
-  Dummy = analogRead(Temp_Pin);
-  Raw_Value = analogRead(Temp_Pin);
-
-  if (Calibration_Mode)
-  // show raw calibration values
-  {
-    /*
-      // Using DS8B20 for temperature
-          sensor.requestTemperatures();
-          while (!sensor.isConversionComplete());
-          Temp_Celsius = sensor.getTempC();
-    */
-
+  // Using DS8B20 for temperature
+  if (Use_DS18B20 && !Missing_DS18B20) {
+    sensor.requestTemperatures();
+    while (!sensor.isConversionComplete())
+      ;  // just wait until a valid temperature
+    Raw_Value = sensor.getTempC();
+  } else {
     // Using any other sensor
+    // read the analog pin
+    Dummy = analogRead(Temp_Pin);
+    Raw_Value = analogRead(Temp_Pin);
+  }
 
+  if (Calibration_Mode) {
+    // show raw calibration values
     Temp_Celsius = Raw_Value;
 
     the_string = String(Temp_Celsius);
@@ -741,16 +742,15 @@ void Update_Temp() {
     //Temp_Celsius = int(-32.36 * log(Temp_Float) + 203.82);
     //Temp_Celsius = constrain(Temp_Celsius, Temp_Min, Temp_Max);
 
-    Temp_Celsius = multiMap<int>(Raw_Value, temp_cal_in, temp_cal_out, temp_sample_size);
-
-    /*
-        // Using DS8B20 for temperature
-        // wait until sensor is ready
-          sensor.requestTemperatures();
-          while (!sensor.isConversionComplete());
-          Temp_Celsius = sensor.getTempC();
-          if (Status_Priority == 5) Status_Priority = 0;
-    */
+    if (Use_DS18B20) {
+      // even though a DS18B20 has a wider range
+      // this keeps the tmep within bounds of the meter
+      Temp_Celsius = constrain(Raw_Value, Temp_Min, Temp_Max);
+      if (Missing_DS18B20) Temp_Celsius = Alert_Temp;
+    } else {
+      // and this has the effect of being a Constraint
+      Temp_Celsius = multiMap<int>(Raw_Value, temp_cal_in, temp_cal_out, temp_sample_size);
+    }
 
     // ----------------- End real measurement ------
   }
@@ -909,7 +909,7 @@ void Display_Warning_Text() {
   if (Calibration_Mode) {
     my_lcd.Set_Text_colour(METER_WHITE);
     my_lcd.Set_Text_Back_colour(METER_BLACK);
-    the_string = String(Battery_Volts) + "     ";
+    the_string = String(Battery_Volts) + " V    ";
     my_lcd.Print_String(the_string, Status_Text_X, Status_Text_Y);
   } else {
     switch (Status_Priority) {
