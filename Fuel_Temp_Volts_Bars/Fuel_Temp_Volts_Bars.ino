@@ -26,15 +26,16 @@
 
 const bool Use_DS18B20 = true;  // set true for using Onewire DS18B20 temperature sensor
 
-int Fan_On_Hyst = 20000;         // msec Hysteresis, minimum run time of fan
-const int Fan_On_Temp = 89;      // degrees C fan on
-const int Alert_Temp = 98;       // degrees C alert level
-const int Low_Temp = 71;         // degree C for low temperatures
-const int Volts_Low = 133;       // low volts warning level x10
-const int Volts_High = 144;      // high volts warning level x10
-const bool Bad_Oil_Press = LOW;  // set whether the oil pressure sensor is Low or High for Bad
-const bool Valid_Warning = LOW;  // set high or low for valid warnings to be passed to external processing
-const bool Fan_On = HIGH;        // set high or low for operating the fan relay
+int Fan_On_Hyst = 20000;                 // msec Hysteresis, minimum run time of fan
+const int Fan_On_Temp = 89;              // degrees C fan on
+const int Alert_Temp = 98;               // degrees C alert level
+const int Low_Temp = 71;                 // degree C for low temperatures
+const int Volts_Low = 133;               // low volts warning level x10
+const int Volts_High = 144;              // high volts warning level x10
+
+const bool Valid_Warning = LOW;          // set high or low for valid warnings to be passed to external processing
+const bool Fan_On = HIGH;                // set high or low for operating the fan relay
+const bool Digitial_Input_Active = LOW;  // set whether digitial inputs are Low or High for active
 
 const float vcc_ref = 4.92;  // measure the 5 volts DC and set it here
 const float R1 = 1200.0;     // measure and set the voltage divider values
@@ -361,11 +362,11 @@ void setup() {
   // Digital inputs
   // remove "PULLUP" after testing
   pinMode(Oil_Press_Pin, INPUT_PULLUP);
-  pinMode(Parker_Light_Pin, INPUT);
-  pinMode(Low_Beam_Pin, INPUT);
-  pinMode(High_Beam_Pin, INPUT);
-  pinMode(RPM_PWM_In_Pin, INPUT);
+  pinMode(Parker_Light_Pin, INPUT_PULLUP);
+  pinMode(Low_Beam_Pin, INPUT_PULLUP);
+  pinMode(High_Beam_Pin, INPUT_PULLUP);
   pinMode(Button_Pin, INPUT_PULLUP);
+  pinMode(RPM_PWM_In_Pin, INPUT);
 
   // Analog inputs
   pinMode(Temp_Pin, INPUT);
@@ -530,9 +531,9 @@ void Check_Button() {
   // Toggle the calibration mode
   // delay allows for debounce
   if (!Startup_Mode) {
-    if (digitalRead(Button_Pin) == LOW) {
+    if (digitalRead(Button_Pin) == Digitial_Input_Active) {
       delay(10);
-      while (digitalRead(Button_Pin) == LOW) {
+      while (digitalRead(Button_Pin) == Digitial_Input_Active) {
         // just wait until button released
         Calibration_Mode = true;
       }
@@ -581,7 +582,7 @@ void Check_Oil() {
   // Process the oil pressure here
   // =======================================================
 
-  if (digitalRead(Oil_Press_Pin) == Bad_Oil_Press) {
+  if (digitalRead(Oil_Press_Pin) == Digitial_Input_Active) {
     Status_Priority = 6;
     Status_Change_Time = millis();
     // Immediately call the routines to update NeoPixels and status text
@@ -1152,11 +1153,11 @@ void Headlight_Status() {
   } else {
     if (Demo_Mode) Light_Status = Lights_Off;
     else {
-      if (digitalRead(Parker_Light_Pin) == LOW) Light_Status = Lights_Off;
-      if (digitalRead(Parker_Light_Pin) == HIGH) Light_Status = Lights_Park;
+      if (digitalRead(Parker_Light_Pin) == !Digitial_Input_Active) Light_Status = Lights_Off;
+      if (digitalRead(Parker_Light_Pin) == Digitial_Input_Active) Light_Status = Lights_Park;
     }
-    if (digitalRead(Low_Beam_Pin) == HIGH) Light_Status = Lights_Low;
-    if (digitalRead(High_Beam_Pin) == HIGH) Light_Status = Lights_High;
+    if (digitalRead(Low_Beam_Pin) == Digitial_Input_Active) Light_Status = Lights_Low;
+    if (digitalRead(High_Beam_Pin) == Digitial_Input_Active) Light_Status = Lights_High;
 
     // Draw the lights indicator
     // Only overwrite it if there has been a change
