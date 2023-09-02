@@ -40,6 +40,7 @@ const bool Valid_Warning = LOW;          // set high or low for valid warnings t
 const bool Fan_On = HIGH;                // set high or low for operating the fan relay
 const bool Digitial_Input_Active = LOW;  // set whether digitial inputs are Low or High for active
 
+// Set these to ensure correct voltage readings of analog inputs
 const float vcc_ref = 4.92;  // measure the 5 volts DC and set it here
 const float R1 = 1200.0;     // measure and set the voltage divider values
 const float R2 = 3300.0;     // for accurate voltage measurements
@@ -222,7 +223,6 @@ const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 #define Fuel_Pin A1          // Fuel level analog input pin
 #define Batt_Volt_Pin A2     // Voltage analog input pin
 #define Alternator_Pin A3    // Alternator indicator analog input pin
-#define Head_Light_Input A4  // Headlights via resistor ladder
 
 // Pin definitions for outputs
 #define RPM_PWM_Out_Pin 9  // Output of RPM as a PWM signal for shift light
