@@ -1,30 +1,33 @@
-
-// FuelLevel Temperature and Voltage barmeters
-// including range warning and fan control
-// Oil Pressure warning
-// Alternator warning, requires 2nd voltage input
-// Dim on low-beam
-// Headlights indication
-// unified warning message area
-// RPM PWM input
-// Shiflight Neopixel LED output
-// Last LED for status
-// DS18B20 temperature sensor support commented out
-// NTC resistor support commented out
-// Using Nissan SR20 temperature sensor by default
-// Offloaded sounds to external Leonardo Tiny
-// Uses multimap instead of formulas for temperature and fuel level
-// Dummy analog reads discarded before real read to allow ADC to settle
-
+/*
+  FuelLevel Temperature and Voltage barmeters
+  including range warning and fan control
+  Oil Pressure warning
+  Alternator warning, requires 2nd voltage input
+  Dim on low-beam
+  Headlights indication
+  unified warning message area
+  RPM PWM input
+  Shiflight Neopixel LED output
+  Last LED for status
+  DS18B20 temperature sensor support commented out
+  NTC resistor support commented out
+  Using Nissan SR20 temperature sensor by default
+  Offloaded sounds to external Leonardo Tiny
+  Uses multimap instead of formulas for temperature and fuel level
+  Dummy analog reads discarded before real read to allow ADC to settle
+*/
 
 
 #define Version "Fuel Temp Bar V16"
 
 
 
+//========================================================================
 //========================== Set These Manually ==========================
+//========================================================================
 
-const bool Use_DS18B20 = true;  // set true for using Onewire DS18B20 temperature sensor
+// set true for using Onewire DS18B20 temperature sensor
+const bool Use_DS18B20 = true;
 
 int Fan_On_Hyst = 20000;                 // msec Hysteresis, minimum run time of fan
 const int Fan_On_Temp = 89;              // degrees C fan on
@@ -42,7 +45,8 @@ const float R1 = 1200.0;     // measure and set the voltage divider values
 const float R2 = 3300.0;     // for accurate voltage measurements
 
 // The range of RPM on the neopixel strip is dictated by the output from the RPM module
-int LED_Count = 8;  // set the length of the NeoPixel shiftlight strip
+// set the length of the NeoPixel shiftlight strip
+int LED_Count = 8;
 const int LED_Dim = 10;
 const int LED_Bright = 80;
 
@@ -50,10 +54,13 @@ const int LED_Bright = 80;
 
 
 
-//========================== Calibration mode ===========================
+//========================================================================
+//========================== Calibration mode ============================
+//========================================================================
 
-// change calibration mode to "true" to see raw fuel and temperature values
-// or press the button after startup period
+// Demo = true gives random speed values
+// Calibration = true displays some calculated and raw values
+// Pressing the button changes to Caibration mode
 bool Calibration_Mode = false;
 bool Demo_Mode = true;
 bool Debug_Mode = false;
@@ -63,15 +70,17 @@ bool Debug_Mode = false;
 
 
 //================== Multimap calibration table ==========================
-// Use calbration mode and measured real values to populate the arrays
-// measure a real value and record matching the arduino calibration value
-//
-// output = Multimap<datatype>(input, inputArray, outputArray, size)
-//
-// Multimap includes a "-1" in the code with respect to the sample size
-// Input array must have increasing values of the analog input
-// Output array is the converted human readable value
-// Output is constrained to the range of values in the arrays
+/*
+  Use calbration mode and measured real values to populate the arrays
+  measure a real value and record matching the arduino calibration value
+
+    output = Multimap<datatype>(input, inputArray, outputArray, size)
+
+  Multimap includes a "-1" in the code with respect to the sample size
+  Input array must have increasing values of the analog input
+  Output array is the converted human readable value
+  Output is constrained to the range of values in the arrays
+*/
 
 #include <MultiMap.h>
 
@@ -94,24 +103,26 @@ int temp_cal_out[] = { 120, 108, 100, 94, 90, 80, 70, 60, 53, 36, 20 };
 
 
 //================= Using DS8B20 temperature sesnor ======================
-// -10°C to +85°C ±0.5°C
-// -30°C to +100°C ±1°C
-// -55°C to +125°C ±2°C
-// Pullup Resistor guide
-//  Length       5.0 Volt  3.3 Volt
-//   10cm (4")    10K0      6K8
-//   20cm (8")    8K2       4K7
-//   50cm (20")   4K7       3K3
-//  100cm (3'4")  3K3       2K2
-//  200cm (6'8")  2K2       1K0
-//
-// A result of -127 degrees indicates a sensor error
-//
-// The DS18B20_INT library is a minimalistic library for a DS18B20 sensor
-// and will give only temperatures in whole degrees C
-//
+/*
+  -10°C to +85°C ±0.5°C
+  -30°C to +100°C ±1°C
+  -55°C to +125°C ±2°C
+
+  Pullup Resistor guide
+    Length       5.0 Volt  3.3 Volt
+    10cm (4")     10K0      6K8
+    20cm (8")     8K2       4K7
+    50cm (20")    4K7       3K3
+    100cm (3'4")  3K3       2K2
+    200cm (6'8")  2K2       1K0
+
+  A result of -127 degrees indicates a sensor error
+
+  The DS18B20_INT library is a minimalistic library for a DS18B20 sensor
+  and will give only temperatures in whole degrees C
+*/
+
 // Comment out if not used to save memory
-//
 #include <OneWire.h>
 #include <DS18B20_INT.h>
 #define ONE_WIRE_BUS 14  // Specify the OneWire bus pin
@@ -196,24 +207,25 @@ const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 #define SD_Select 53
 
 // Pin definitions for digital inputs
-// pin 14 used for onewire sensor if present
 #define Oil_Press_Pin 0     // Oil pressure digital input pin
 #define Parker_Light_Pin 1  // Parker lights digital input pin
 #define Low_Beam_Pin 2      // Low beam digital input pin
 #define High_Beam_Pin 3     // High beam digital input pin
 #define Pbrake_Input_Pin 4  // Park brake input pin
 #define VSS_Input_Pin 5     // Speed frequency input pin
-#define RPM_Input_Pin 6     // RPM frequency input pin
-#define RPM_PWM_In_Pin 6    // Input PWM signal representing RPM
+#define RPM_Input_Pin 6     // RPM frequency INPUT pin
 #define Button_Pin 7        // Button momentary input
+#define RPM_PWM_In_Pin 8    // Input PWM signal representing RPM
 
 // Pin definitions for analog inputs
-#define Temp_Pin A0        // Temperature analog input pin - not used with OneWire sensor
-#define Fuel_Pin A1        // Fuel level analog input pin
-#define Batt_Volt_Pin A2   // Voltage analog input pin
-#define Alternator_Pin A3  // Alternator indicator analog input pin
+#define Temp_Pin A0          // Temperature analog input pin - OneWire sensor on pin 14
+#define Fuel_Pin A1          // Fuel level analog input pin
+#define Batt_Volt_Pin A2     // Voltage analog input pin
+#define Alternator_Pin A3    // Alternator indicator analog input pin
+#define Head_Light_Input A4  // Headlights via resistor ladder
 
 // Pin definitions for outputs
+#define RPM_PWM_Out_Pin 9  // Output of RPM as a PWM signal for shift light
 #define LED_Pin 10         // NeoPixel LED pin
 #define Warning_Pin 11     // Link to external Leonardo for general warning sounds
 #define OP_Warning_Pin 12  // Link to external Leonardo for oil pressure warning sound
@@ -360,7 +372,6 @@ void setup() {
   digitalWrite(OP_Warning_Pin, !Valid_Warning);
 
   // Digital inputs
-  // remove "PULLUP" after testing
   pinMode(Oil_Press_Pin, INPUT_PULLUP);
   pinMode(Parker_Light_Pin, INPUT_PULLUP);
   pinMode(Low_Beam_Pin, INPUT_PULLUP);
@@ -532,6 +543,8 @@ void Check_Button() {
   // delay allows for debounce
   if (!Startup_Mode) {
     if (digitalRead(Button_Pin) == Digitial_Input_Active) {
+      // Allow time for the button pin to settle
+      // this assumes some electronic/external debounce
       delay(10);
       while (digitalRead(Button_Pin) == Digitial_Input_Active) {
         // just wait until button released
@@ -539,6 +552,7 @@ void Check_Button() {
       }
     }
   }
+  // cant have both demo mode and calibration mode at once
   if (Calibration_Mode) Demo_Mode = false;
 
 
