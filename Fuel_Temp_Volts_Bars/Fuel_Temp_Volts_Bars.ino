@@ -29,12 +29,12 @@
 // set true for using Onewire DS18B20 temperature sensor
 const bool Use_DS18B20 = true;
 
-int Fan_On_Hyst = 20000;                 // msec Hysteresis, minimum run time of fan
-const int Fan_On_Temp = 89;              // degrees C fan on
-const int Alert_Temp = 98;               // degrees C alert level
-const int Low_Temp = 71;                 // degree C for low temperatures
-const int Volts_Low = 133;               // low volts warning level x10
-const int Volts_High = 144;              // high volts warning level x10
+int Fan_On_Hyst = 20000;     // msec Hysteresis, minimum run time of fan
+const int Fan_On_Temp = 89;  // degrees C fan on
+const int Alert_Temp = 98;   // degrees C alert level
+const int Low_Temp = 71;     // degree C for low temperatures
+const int Volts_Low = 133;   // low volts warning level x10
+const int Volts_High = 144;  // high volts warning level x10
 
 const bool Valid_Warning = LOW;          // set high or low for valid warnings to be passed to external processing
 const bool Fan_On = HIGH;                // set high or low for operating the fan relay
@@ -219,10 +219,10 @@ const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 #define RPM_PWM_In_Pin 8    // Input PWM signal representing RPM
 
 // Pin definitions for analog inputs
-#define Temp_Pin A0          // Temperature analog input pin - OneWire sensor on pin 14
-#define Fuel_Pin A1          // Fuel level analog input pin
-#define Batt_Volt_Pin A2     // Voltage analog input pin
-#define Alternator_Pin A3    // Alternator indicator analog input pin
+#define Temp_Pin A0        // Temperature analog input pin - OneWire sensor on pin 14
+#define Fuel_Pin A1        // Fuel level analog input pin
+#define Batt_Volt_Pin A2   // Voltage analog input pin
+#define Alternator_Pin A3  // Alternator indicator analog input pin
 
 // Pin definitions for outputs
 #define RPM_PWM_Out_Pin 9  // Output of RPM as a PWM signal for shift light
@@ -372,10 +372,12 @@ void setup() {
   digitalWrite(OP_Warning_Pin, !Valid_Warning);
 
   // Digital inputs
+  // remove input_pullup's after testing
+  // since pullups are handled by external hardware
   pinMode(Oil_Press_Pin, INPUT_PULLUP);
   pinMode(Parker_Light_Pin, INPUT_PULLUP);
-  pinMode(Low_Beam_Pin, INPUT_PULLUP);
-  pinMode(High_Beam_Pin, INPUT_PULLUP);
+  pinMode(Low_Beam_Pin, INPUT);
+  pinMode(High_Beam_Pin, INPUT);
   pinMode(Button_Pin, INPUT_PULLUP);
   pinMode(RPM_PWM_In_Pin, INPUT);
 
