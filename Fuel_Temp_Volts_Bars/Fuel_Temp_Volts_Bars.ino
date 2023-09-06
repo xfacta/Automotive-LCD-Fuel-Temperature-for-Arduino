@@ -374,12 +374,21 @@ void setup() {
   // Digital inputs
   // remove input_pullup's after testing
   // since pullups are handled by external hardware
-  pinMode(Oil_Press_Pin, INPUT_PULLUP);
-  pinMode(Parker_Light_Pin, INPUT_PULLUP);
-  pinMode(Low_Beam_Pin, INPUT);
-  pinMode(High_Beam_Pin, INPUT);
-  pinMode(Button_Pin, INPUT_PULLUP);
-  pinMode(RPM_PWM_In_Pin, INPUT);
+  if (Demo_Mode) {
+    pinMode(Oil_Press_Pin, INPUT_PULLUP);
+    pinMode(Parker_Light_Pin, INPUT_PULLUP);
+    pinMode(Low_Beam_Pin, INPUT_PULLUP);
+    pinMode(High_Beam_Pin, INPUT_PULLUP);
+    pinMode(Button_Pin, INPUT_PULLUP);
+    pinMode(RPM_PWM_In_Pin, INPUT_PULLUP);
+  } else {
+    pinMode(Oil_Press_Pin, INPUT);
+    pinMode(Parker_Light_Pin, INPUT);
+    pinMode(Low_Beam_Pin, INPUT);
+    pinMode(High_Beam_Pin, INPUT);
+    pinMode(Button_Pin, INPUT);
+    pinMode(RPM_PWM_In_Pin, INPUT);
+  }
 
   // Analog inputs
   pinMode(Temp_Pin, INPUT);
