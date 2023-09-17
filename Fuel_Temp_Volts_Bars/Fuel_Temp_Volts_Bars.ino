@@ -27,14 +27,14 @@
 //========================================================================
 
 // set true for using Onewire DS18B20 temperature sensor
-const bool Use_DS18B20 = true;
+const bool Use_DS18B20           = true;
 
-int       Fan_On_Hyst = 20000;    // msec Hysteresis, minimum run time of fan
-const int Fan_On_Temp = 89;       // degrees C fan on
-const int Alert_Temp  = 98;       // degrees C alert level
-const int Low_Temp    = 71;       // degree C for low temperatures
-const int Volts_Low   = 133;      // low volts warning level x10
-const int Volts_High  = 144;      // high volts warning level x10
+int        Fan_On_Hyst           = 20000;    // msec Hysteresis, minimum run time of fan
+const int  Fan_On_Temp           = 89;       // degrees C fan on
+const int  Alert_Temp            = 98;       // degrees C alert level
+const int  Low_Temp              = 71;       // degree C for low temperatures
+const int  Volts_Low             = 133;      // low volts warning level x10
+const int  Volts_High            = 144;      // high volts warning level x10
 
 const bool Valid_Warning         = LOW;     // set high or low for valid warnings to be passed to external processing
 const bool Fan_On                = HIGH;    // set high or low for operating the fan relay
@@ -138,13 +138,13 @@ DS18B20_INT sensor(&oneWire);
 #include <LCDWIKI_KBV.h>    //Hardware-specific library
 
 // Meter colour schemes
-#define RED2RED     0
-#define GREEN2GREEN 1
-#define BLUE2BLUE   2
-#define BLUE2RED    3
-#define GREEN2RED   4
-#define RED2GREEN   5
-#define RED2BLUE    6
+#define RED2RED           0
+#define GREEN2GREEN       1
+#define BLUE2BLUE         2
+#define BLUE2RED          3
+#define GREEN2RED         4
+#define RED2GREEN         5
+#define RED2BLUE          6
 
 #define METER_BLACK       0x0000 /*   0,   0,   0 */
 #define METER_NAVY        0x000F /*   0,   0, 128 */
@@ -413,7 +413,7 @@ void setup()
     my_lcd.Set_Text_colour(METER_LIGHTGREY);
     my_lcd.Set_Text_Size(2);
     my_lcd.Print_String(Version, CENTER, LCD_Offset_Y + 160);
-    delay(2000);
+    delay(1000);
 
     // Using DS8B20 for temperature
     if (Use_DS18B20)
@@ -783,6 +783,11 @@ void Update_Temp()
         while (!sensor.isConversionComplete())
             ;    // just wait until a valid temperature
         Raw_Value = sensor.getTempC();
+        if (Raw_Value == -127)
+            {
+            // Sensor fault
+            Missing_DS18B20 = true;
+            }
         }
     else
         {
@@ -796,7 +801,7 @@ void Update_Temp()
     if (Calibration_Mode)
         {
         // show raw calibration values
-        Temp_Celsius = Raw_Value;
+        Temp_Celsius    = Raw_Value;
 
         reusable_string = String(Temp_Celsius);
         if (Temp_Celsius < 10)
@@ -1361,9 +1366,9 @@ void Headlight_Status()
                     // do nothing
                     break;
                 }    // the end of the switch statement.
-            }    // end of light status changed
+            }        // end of light status changed
         Light_Last_Status = Light_Status;
-        }   // end of calibration mode choice
+        }    // end of calibration mode choice
 
 
     }    // end void Headlight_Status
@@ -1381,7 +1386,7 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
     int segs = (vmax - vmin) / 20;
     int g    = h / segs;
 
-    int v = map(value, vmin, vmax, 0, segs);
+    int v    = map(value, vmin, vmax, 0, segs);
 
     // Draw "segs" colour blocks
     for (int b = 0; b <= segs; b++)
@@ -1440,9 +1445,9 @@ unsigned int rainbow(byte value)
     // Value is expected to be in range 0-127
     // The value is converted to a spectrum colour from 0 = blue through to 127 = red
 
-    byte red   = 0;    // Red is the top 5 bits of a 16 bit colour value
-    byte green = 0;    // Green is the middle 6 bits
-    byte blue  = 0;    // Blue is the bottom 5 bits
+    byte red      = 0;    // Red is the top 5 bits of a 16 bit colour value
+    byte green    = 0;    // Green is the middle 6 bits
+    byte blue     = 0;    // Blue is the bottom 5 bits
 
     byte quadrant = value / 32;
 
