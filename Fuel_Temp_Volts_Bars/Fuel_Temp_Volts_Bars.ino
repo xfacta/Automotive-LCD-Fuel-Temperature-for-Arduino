@@ -63,7 +63,7 @@ const int LED_Bright = 80;
 // Calibration = true displays some calculated and raw values
 // Pressing the button changes to Caibration mode
 bool Calibration_Mode = false;
-bool Demo_Mode        = true;
+bool Demo_Mode        = false;
 bool Debug_Mode       = false;
 
 //========================================================================
@@ -123,7 +123,9 @@ int       temp_cal_out[]   = { 120, 108, 100, 94, 90, 80, 70, 60, 53, 36, 20 };
   and will give only temperatures in whole degrees C
 */
 
-// Comment out if not used to save memory
+// Onewire and DS18B20 libraries
+// Using a cut-down integer-only version to
+// improve read times of the DS18B20 sensor
 #include <OneWire.h>
 #include <DS18B20_INT.h>
 #define ONE_WIRE_BUS 14    // Specify the OneWire bus pin
@@ -331,14 +333,15 @@ int PWM_high, PWM_low, PWM_duty, LED_pos;
 int  Old_PWM_duty;
 bool Count_Up = true;
 
-// Create a colour scheme for number of LEDs
+// Create a colour scheme for number of Neopixel LEDs
 // with off (0) as the first value
 // INVERSE HSV blue/light blue/white
-// uint32_t LED_Colour[] = {0x000000, 0x0000FF, 0x284BFF, 0x508AFF, 0x78BBFF, 0xA0DFFF, 0xC8F5FF, 0xF0FFFF, 0xFFFFFF};
+//uint32_t LED_Colour[] = {0x000000, 0x0000FF, 0x284BFF, 0x508AFF, 0x78BBFF, 0xA0DFFF, 0xC8F5FF, 0xF0FFFF, 0xFFFFFF};
 // RGB red/orange/yellow/white
-uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFFD470, 0xFFE9B8, 0xFFFFFF, 0xFFFFFF };
+//uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFFD470, 0xFFE9B8, 0xFFFFFF, 0xFFFFFF };
 // INVERSE HSV green/yellow/white
-// uint32_t LED_Colour[] = {0x000000, 0x00FF00, 0x05FFD6, 0x0A59FF, 0x8A0FFF, 0xFF14AC, 0xFF4519, 0xF8FF1F, 0xFFFFFF};
+//uint32_t LED_Colour[] = {0x000000, 0x00FF00, 0x05FFD6, 0x0A59FF, 0x8A0FFF, 0xFF14AC, 0xFF4519, 0xF8FF1F, 0xFFFFFF};
+uint32_t LED_Colour[] = { 0x000000, 0xFFE500, 0xFFCA00, 0xFFAD00, 0xFF9000, 0xFF7000, 0xFF4B00, 0xFF0000, 0xFF0000 };
 
 
 
@@ -380,24 +383,12 @@ void setup()
     // Digital inputs
     // remove input_pullup's after testing
     // since pullups are handled by external hardware
-    if (Demo_Mode)
-        {
-        pinMode(Oil_Press_Pin, INPUT_PULLUP);
-        pinMode(Parker_Light_Pin, INPUT_PULLUP);
-        pinMode(Low_Beam_Pin, INPUT_PULLUP);
-        pinMode(High_Beam_Pin, INPUT_PULLUP);
-        pinMode(Button_Pin, INPUT_PULLUP);
-        pinMode(RPM_PWM_In_Pin, INPUT_PULLUP);
-        }
-    else
-        {
-        pinMode(Oil_Press_Pin, INPUT);
-        pinMode(Parker_Light_Pin, INPUT);
-        pinMode(Low_Beam_Pin, INPUT);
-        pinMode(High_Beam_Pin, INPUT);
-        pinMode(Button_Pin, INPUT);
-        pinMode(RPM_PWM_In_Pin, INPUT);
-        }
+    pinMode(Oil_Press_Pin, INPUT_PULLUP);
+    pinMode(Parker_Light_Pin, INPUT_PULLUP);
+    pinMode(Low_Beam_Pin, INPUT_PULLUP);
+    pinMode(High_Beam_Pin, INPUT_PULLUP);
+    pinMode(Button_Pin, INPUT_PULLUP);
+    pinMode(RPM_PWM_In_Pin, INPUT);
 
     // Analog inputs
     pinMode(Temp_Pin, INPUT);
@@ -727,10 +718,6 @@ void Update_Fuel()
         Fuel_Litres      = (Fuel_Litres + Last_Fuel_Litres) / 2;
         Last_Fuel_Litres = Fuel_Litres;
 
-        // Draw fuel meter
-        new_val = map(Fuel_Litres, Fuel_Min, Fuel_Max, Meter_Min, Meter_Max);
-        Bar_Meter(new_val, Meter_Min, Meter_Max, Fuel_Bar_X, Fuel_Bar_Y, Bar_Width, Bar_Height, RED2BLUE);
-
         // Change text colours depending on remaining fuel
         Warn_Text_Colour = METER_WHITE;
         if (Fuel_Litres < Warning_Fuel * 1.4)
@@ -757,6 +744,10 @@ void Update_Fuel()
         my_lcd.Set_Text_Size(2);
         my_lcd.Set_Text_colour(Warn_Text_Colour);
         my_lcd.Print_String(reusable_string, Fuel_Bar_X - 30, Fuel_Bar_Y - (Bar_Height / 2));
+
+        // Draw fuel meter
+        new_val = map(Fuel_Litres, Fuel_Min, Fuel_Max, Meter_Min, Meter_Max);
+        Bar_Meter(new_val, Meter_Min, Meter_Max, Fuel_Bar_X, Fuel_Bar_Y, Bar_Width, Bar_Height, RED2BLUE);
         }
 
 
@@ -842,14 +833,14 @@ void Update_Temp()
 
         if (Use_DS18B20)
             {
-            // even though a DS18B20 has a wider range
-            // this keeps the tmep within bounds of the meter
-            Temp_Celsius = constrain(Raw_Value, Temp_Min, Temp_Max);
+            // stay within 0 to 125 celcius, so we dont have to process negative numbers
+            Temp_Celsius = constrain(Raw_Value, 0, 125);
             if (Missing_DS18B20)
                 Temp_Celsius = Alert_Temp;
             }
         else
             {
+            // Scale the anolog reading to a real celcius value
             // this also has the effect of being a Constraint
             Temp_Celsius = multiMap<int>(Raw_Value, temp_cal_in, temp_cal_out, temp_sample_size);
             }
@@ -859,9 +850,6 @@ void Update_Temp()
 
     if (!Calibration_Mode)
         {
-        // Draw temperature meter
-        new_val = map(Temp_Celsius, Temp_Min, Temp_Max, Meter_Min, Meter_Max);
-        Bar_Meter(new_val, Meter_Min, Meter_Max, Temp_Bar_X, Temp_Bar_Y, Bar_Width, Bar_Height, BLUE2RED);
 
         // Change text colours depending on temperature
         if (Status_Priority == 5)
@@ -886,6 +874,12 @@ void Update_Temp()
         my_lcd.Set_Text_Size(2);
         my_lcd.Set_Text_colour(Warn_Text_Colour);
         my_lcd.Print_String(reusable_string, Temp_Bar_X + Bar_Width + 10, Temp_Bar_Y - (Bar_Height / 2));
+
+        // Draw temperature meter
+        // and keep within a reasonable range
+        // even though DS18B20 digits may be outside that range
+        new_val = map(Temp_Celsius, Temp_Min, Temp_Max, Meter_Min, Meter_Max);
+        Bar_Meter(new_val, Meter_Min, Meter_Max, Temp_Bar_X, Temp_Bar_Y, Bar_Width, Bar_Height, BLUE2RED);
         }
 
 
@@ -1156,8 +1150,16 @@ void ShiftLight_Strip()
         // Read the PWM input and derive a number of LEDs to light
         PWM_high = pulseIn(RPM_PWM_In_Pin, HIGH);
         PWM_low  = pulseIn(RPM_PWM_In_Pin, LOW);
-        PWM_duty = (PWM_high / (PWM_high + PWM_low)) * 100;
+        PWM_duty = int(((float)PWM_high / ((float)PWM_high + (float)PWM_low)) * 100.0);
         // -----------------------------------------------
+        }
+
+    if (Debug_Mode)
+        {
+        //Serial.println(PWM_high);
+        //Serial.println(PWM_low);
+        Serial.print("PWM_duty ");
+        Serial.println(PWM_duty);
         }
 
     PWM_duty = constrain(PWM_duty, 0, 100);
@@ -1165,7 +1167,7 @@ void ShiftLight_Strip()
     // Display RPM on the WS2812 LED strip for shiftlight function
     // Set the colour based on how many LEDs will be illuminated
     // Colour is chosen from the array
-    LED_pos = map(PWM_duty, 0, 100, 0, LED_Count);
+    LED_pos = map(PWM_duty, 10, 100, 0, LED_Count+1);
     strip.fill(LED_Colour[LED_pos], 0, LED_pos);
 
     // Set unused pixels to off (black)
@@ -1215,8 +1217,8 @@ void ShiftLight_Strip()
         // in reverse order so highest priority is executed first
         case 6:
             // Oil Pressure
-            // Set all LEDs to red
-            strip.fill(0xFF0000, 0, LED_Count + 1);
+            // Set all LEDs to White
+            strip.fill(0xFFFFFF, 0, LED_Count);
             break;
         case 5:
             // Over temperature
@@ -1257,8 +1259,6 @@ void ShiftLight_Strip()
 
     if (Debug_Mode)
         {
-        Serial.print("PWM_duty ");
-        Serial.println(PWM_duty);
         Serial.print("LED_pos ");
         Serial.println(LED_pos);
         // Slow down the PWM readingss for debug mode
