@@ -6,7 +6,7 @@
   Dim on low-beam
   Headlights indication
   unified warning message area
-  RPM PWM input
+  RPM Serial2 input
   Shiflight Neopixel LED output
   Last LED for status
   DS18B20 temperature sensor support commented out
@@ -220,7 +220,7 @@ const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 #define VSS_Input_Pin    5    // Speed frequency input pin
 #define RPM_Input_Pin    6    // RPM frequency INPUT pin
 #define Button_Pin       7    // Button momentary input
-#define RPM_PWM_In_Pin   8    // Input PWM signal representing RPM
+// #define RPM_Serial_In_Pin 8    // Input PWM signal representing RPM - Serial2 17(RX), 16(TX)
 
 // Pin definitions for analog inputs
 #define Temp_Pin       A0    // Temperature analog input pin - OneWire sensor on pin 14
@@ -229,11 +229,11 @@ const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 #define Alternator_Pin A3    // Alternator indicator analog input pin
 
 // Pin definitions for outputs
-#define RPM_PWM_Out_Pin 9     // Output of RPM as a PWM signal for shift light
-#define LED_Pin         10    // NeoPixel LED pin
-#define Warning_Pin     11    // Link to external Leonardo for general warning sounds
-#define OP_Warning_Pin  12    // Link to external Leonardo for oil pressure warning sound
-#define Relay_Pin       13    // Relay for fan control
+// #define RPM_Serial_Out_Pin 9     // Output of RPM as a PWM signal for shift light - Serial2 17(RX), 16(TX)
+#define LED_Pin        10    // NeoPixel LED pin
+#define Warning_Pin    11    // Link to external Leonardo for general warning sounds
+#define OP_Warning_Pin 12    // Link to external Leonardo for oil pressure warning sound
+#define Relay_Pin      13    // Relay for fan control
 
 // Define the NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_Count, LED_Pin, NEO_GRB + NEO_KHZ800);
@@ -328,9 +328,9 @@ const int Meter_Min = 0;
 */
 
 // NeoPixel shiftlight variables
-int PWM_high, PWM_low, PWM_duty, LED_pos;
+int RPM_LED_Pos;
 // For demo PWM values
-int  Old_PWM_duty;
+int  Old_RPM_LED_pos;
 bool Count_Up = true;
 
 // Create a colour scheme for number of Neopixel LEDs
@@ -352,9 +352,9 @@ uint32_t LED_Colour[] = { 0x000000, 0xFFE500, 0xFFCA00, 0xFFAD00, 0xFF9000, 0xFF
 void setup()
     {
 
-
-    if (Debug_Mode)
-        Serial.begin(9600);
+    // Start a serial port for sending RPM LED shift light position
+    // Serial2 17(RX), 16(TX)
+    Serial2.begin(57600);
 
     analogReference(DEFAULT);
 
@@ -388,7 +388,6 @@ void setup()
     pinMode(Low_Beam_Pin, INPUT_PULLUP);
     pinMode(High_Beam_Pin, INPUT_PULLUP);
     pinMode(Button_Pin, INPUT_PULLUP);
-    pinMode(RPM_PWM_In_Pin, INPUT);
 
     // Analog inputs
     pinMode(Temp_Pin, INPUT);
@@ -464,27 +463,6 @@ void setup()
         Demo_Mode = false;
     if (Demo_Mode)
         Fan_On_Hyst = Fan_On_Hyst / 3;
-
-    if (Debug_Mode)
-        {
-        Serial.print("Fuel_Min ");
-        Serial.println(Fuel_Min);
-        Serial.print("Fuel_Max ");
-        Serial.println(Fuel_Max);
-        Serial.print("Temp_Min ");
-        Serial.println(Temp_Min);
-        Serial.print("Temp_Max ");
-        Serial.println(Temp_Max);
-        Serial.print("Warning_Fuel ");
-        Serial.println(Warning_Fuel);
-        Serial.print("Meter_Max ");
-        Serial.println(Meter_Max);
-        Serial.print("Meter_Min ");
-        Serial.println(Meter_Min);
-        Serial.print("Fan_On_Hyst  ");
-        Serial.println(Fan_On_Hyst);
-        }
-
 
     Long_Loop_Time  = millis();
     Short_Loop_Time = millis();
@@ -1119,61 +1097,59 @@ void ShiftLight_Strip()
 
     // Set low brightness if headlights are on
     if (Dim_Mode)
+        {
         strip.setBrightness(LED_Dim);
+        }
     else
+        {
         strip.setBrightness(LED_Bright);
+        }
 
     if (Demo_Mode)
         {
-        // ----------------- FOR TESTING -----------------
-        //Old_PWM_duty = PWM_duty;
-        if (Count_Up && PWM_duty < 110)
+        // ----------------- FOR TESTING ----------------
+        if (Count_Up && RPM_LED_Pos < LED_Count)
             {
-            PWM_duty = PWM_duty + 10;
-            if (PWM_duty > 100)
+            RPM_LED_Pos = RPM_LED_Pos + 1;
+            if (RPM_LED_Pos > LED_Count)
+                {
                 Count_Up = !Count_Up;
+                }
             }
-        if (!Count_Up && PWM_duty > -20)
+        if (!Count_Up && RPM_LED_Pos > -10)
             {
-            PWM_duty = PWM_duty - 10;
-            if (PWM_duty <= -10)
+            RPM_LED_Pos = RPM_LED_Pos - 1;
+            if (RPM_LED_Pos <= -10)
+                {
                 Count_Up = !Count_Up;
+                }
             }
-        //PWM_duty = random(-200, 120);
-        //PWM_duty = 10;
-        //PWM_duty = constrain(PWM_duty, Old_PWM_duty - 50, Old_PWM_duty + 50);
-        // -----------------------------------------------
+        //RPM_LED_Pos = random(-LED_Count, LED_Count);
+        // ----------------------------------------------
         }
     else
         {
-        // ----------------- FOR REAL -----------------
-        // Read the PWM input and derive a number of LEDs to light
-        PWM_high = pulseIn(RPM_PWM_In_Pin, HIGH);
-        PWM_low  = pulseIn(RPM_PWM_In_Pin, LOW);
-        PWM_duty = int(((float)PWM_high / ((float)PWM_high + (float)PWM_low)) * 100.0);
-        // -----------------------------------------------
+        // ------------------ FOR REAL ------------------
+        // Read the serial input for number of LEDs to light
+        if (Serial2.available() > 0)
+            {
+            RPM_LED_Pos = Serial2.read();
+            }
+        // ----------------------------------------------
         }
 
-    if (Debug_Mode)
-        {
-        //Serial.println(PWM_high);
-        //Serial.println(PWM_low);
-        Serial.print("PWM_duty ");
-        Serial.println(PWM_duty);
-        }
-
-    PWM_duty = constrain(PWM_duty, 0, 100);
+    RPM_LED_Pos = constrain(RPM_LED_Pos, 0, LED_Count);
 
     // Display RPM on the WS2812 LED strip for shiftlight function
     // Set the colour based on how many LEDs will be illuminated
     // Colour is chosen from the array
-    LED_pos = map(PWM_duty, 10, 100, 0, LED_Count+1);
-    strip.fill(LED_Colour[LED_pos], 0, LED_pos);
+    //LED_pos = map(PWM_duty, 0, 98, 0, LED_Count);
+    strip.fill(LED_Colour[RPM_LED_Pos], 0, RPM_LED_Pos);
 
     // Set unused pixels to off (black)
     // Unless one of the following sections sets the last LED it will remain off
-    if (LED_pos < LED_Count)
-        strip.fill(0, LED_pos, LED_Count);
+    if (RPM_LED_Pos < LED_Count)
+        strip.fill(0, RPM_LED_Pos, LED_Count);
 
     /*
       Lights_NotChanged = 0;
@@ -1256,14 +1232,6 @@ void ShiftLight_Strip()
 
     // Send the updated pixel info to the hardware
     strip.show();
-
-    if (Debug_Mode)
-        {
-        Serial.print("LED_pos ");
-        Serial.println(LED_pos);
-        // Slow down the PWM readingss for debug mode
-        delay(400);
-        }
 
 
     }    // end void ShiftLight_Strip
