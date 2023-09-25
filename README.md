@@ -12,7 +12,7 @@
 - Dim on low-beam
 - Headlights indication
 - Unified warning message area
-- RPM PWM input for shiftlight
+- Shiftlight input from Tacho via serial
 - Shiflight Neopixel LED output
 - Last LED for status, or whole strip for oil pressure warning
 - Offloaded sounds to external Leonardo Tiny
@@ -78,7 +78,7 @@ int temp_cal_in[] = { 15, 20, 25, 30, 33, 44, 61, 85, 109, 198, 332 };
 int temp_cal_out[] = { 120, 108, 100, 94, 90, 80, 70, 60, 53, 36, 22 };
 ```
 
-The range of RPM on the neopixel strip is dictated by the PWM output and settings on the RPM module (another Arduino)
+The range of RPM on the neopixel strip is dictated by the serial output and settings on the Tachometer module (another Arduino)
 
 ### You can also set
 - `Demo_Mode` = true or false for display of random values
