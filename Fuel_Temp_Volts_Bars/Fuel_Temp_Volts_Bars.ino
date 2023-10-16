@@ -63,7 +63,7 @@ const int LED_Bright = 80;
 // Calibration = true displays some calculated and raw values
 // Pressing the button changes to Caibration mode
 bool Calibration_Mode = false;
-bool Demo_Mode        = false;
+bool Demo_Mode        = true;
 bool Debug_Mode       = false;
 
 //========================================================================
@@ -328,20 +328,18 @@ const int Meter_Min = 0;
 */
 
 // NeoPixel shiftlight variables
-int RPM_LED_Pos;
-// For demo PWM values
-int  Old_RPM_LED_pos;
+int  RPM_LED_Pos;
 bool Count_Up = true;
 
 // Create a colour scheme for number of Neopixel LEDs
 // with off (0) as the first value
 // INVERSE HSV blue/light blue/white
-//uint32_t LED_Colour[] = {0x000000, 0x0000FF, 0x284BFF, 0x508AFF, 0x78BBFF, 0xA0DFFF, 0xC8F5FF, 0xF0FFFF, 0xFFFFFF};
+//uint32_t LED_Colour[] = { 0x000000, 0x0000FF, 0x284BFF, 0x508AFF, 0x78BBFF, 0xA0DFFF, 0xC8F5FF, 0xF0FFFF, 0xFFFFFF };
 // RGB red/orange/yellow/white
 //uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFFD470, 0xFFE9B8, 0xFFFFFF, 0xFFFFFF };
-// INVERSE HSV green/yellow/white
-//uint32_t LED_Colour[] = {0x000000, 0x00FF00, 0x05FFD6, 0x0A59FF, 0x8A0FFF, 0xFF14AC, 0xFF4519, 0xF8FF1F, 0xFFFFFF};
-uint32_t LED_Colour[] = { 0x000000, 0xFFE500, 0xFFCA00, 0xFFAD00, 0xFF9000, 0xFF7000, 0xFF4B00, 0xFF0000, 0xFF0000 };
+//  green/yellow/orange/red
+uint32_t LED_Colour[] = { 0x000000, 0x00FF00, 0x00FF00, 0xFFFF00, 0xFFFF00, 0xFFAA00, 0xFFAA00, 0xFF4800, 0xFF4800 };
+//uint32_t LED_Colour[] = { 0x000000, 0xFFE500, 0xFFCA00, 0xFFAD00, 0xFF9000, 0xFF7000, 0xFF4B00, 0xFF0000, 0xFF0000 };
 
 
 
@@ -437,7 +435,6 @@ void setup()
     for (int i = 0; i < LED_Count + 3; i++)
         {
         delay(50);
-        //strip.setPixelColor(i + 1, strip.Color(24, 0, 0));
         strip.setPixelColor(i, strip.Color(255, 0, 0));
         strip.setPixelColor(i - 1, strip.Color(50, 0, 0));
         strip.setPixelColor(i - 2, strip.Color(12, 0, 0));
@@ -446,7 +443,6 @@ void setup()
         }
     for (int i = LED_Count + 3; i > -4; i--)
         {
-        //strip.setPixelColor(i - 1, strip.Color(24, 0, 0));
         strip.setPixelColor(i, strip.Color(255, 0, 0));
         strip.setPixelColor(i + 1, strip.Color(50, 0, 0));
         strip.setPixelColor(i + 2, strip.Color(12, 0, 0));
@@ -455,8 +451,7 @@ void setup()
         delay(50);
         }
     strip.clear();
-    // actual number of LEDs is 0 to LED_Count
-    LED_Count = LED_Count - 1;
+
 
     // Check - cant have both modes at once
     if (Calibration_Mode)
@@ -499,6 +494,7 @@ void loop()
         Headlight_Status();
         Display_Warning_Text();
         Check_Button();
+        // In demo mode ony update the neopixels periodically
         if (Demo_Mode)
             ShiftLight_Strip();
 
@@ -514,7 +510,7 @@ void loop()
         {
         Check_Voltages();
         Update_Fuel();
-        Update_Temp();
+        Update_Temperature();
         Update_Dim_Status();
         if (!Calibration_Mode)
             Control_Fan();
@@ -737,7 +733,7 @@ void Update_Fuel()
 
 
 
-void Update_Temp()
+void Update_Temperature()
     {
 
 
@@ -861,7 +857,7 @@ void Update_Temp()
         }
 
 
-    }    // End void Update_Temp
+    }    // End void Update_Temperature
 
 
 
@@ -1092,8 +1088,11 @@ void ShiftLight_Strip()
 
 
     // =======================================================
-    // OPerate the NeoPixel strip
+    // Operate the NeoPixel strip
     // =======================================================
+
+    // Usage
+    // strip.fill(Colour, Position, Count);
 
     // Set low brightness if headlights are on
     if (Dim_Mode)
@@ -1108,29 +1107,33 @@ void ShiftLight_Strip()
     if (Demo_Mode)
         {
         // ----------------- FOR TESTING ----------------
-        if (Count_Up && RPM_LED_Pos < LED_Count)
+        /*
+        if (Count_Up)
             {
             RPM_LED_Pos = RPM_LED_Pos + 1;
             if (RPM_LED_Pos > LED_Count)
                 {
-                Count_Up = !Count_Up;
+                Count_Up = false;
                 }
             }
-        if (!Count_Up && RPM_LED_Pos > -10)
+        if (!Count_Up)
             {
             RPM_LED_Pos = RPM_LED_Pos - 1;
-            if (RPM_LED_Pos <= -10)
+            if (RPM_LED_Pos < 0)
                 {
-                Count_Up = !Count_Up;
+                Count_Up = true;
                 }
             }
-        //RPM_LED_Pos = random(-LED_Count, LED_Count);
+*/
+        RPM_LED_Pos = random(-LED_Count, LED_Count);
         // ----------------------------------------------
         }
     else
         {
         // ------------------ FOR REAL ------------------
         // Read the serial input for number of LEDs to light
+        // 0 = no LEDs lit
+        // 1 -> {LED_Count} = number of LEDs lit
         if (Serial2.available() > 0)
             {
             RPM_LED_Pos = Serial2.read();
@@ -1140,16 +1143,23 @@ void ShiftLight_Strip()
 
     RPM_LED_Pos = constrain(RPM_LED_Pos, 0, LED_Count);
 
+    // display LED_Pos for debugging
+    /*
+    my_lcd.Set_Text_Back_colour(METER_BLACK);
+    my_lcd.Set_Text_colour(METER_WHITE);
+    my_lcd.Set_Text_Size(2);
+    my_lcd.Print_Number_Int(RPM_LED_Pos, CENTER, LCD_Offset_Y + 400, 1, ' ', 10);
+    */
+
     // Display RPM on the WS2812 LED strip for shiftlight function
     // Set the colour based on how many LEDs will be illuminated
     // Colour is chosen from the array
-    //LED_pos = map(PWM_duty, 0, 98, 0, LED_Count);
     strip.fill(LED_Colour[RPM_LED_Pos], 0, RPM_LED_Pos);
 
     // Set unused pixels to off (black)
     // Unless one of the following sections sets the last LED it will remain off
     if (RPM_LED_Pos < LED_Count)
-        strip.fill(0, RPM_LED_Pos, LED_Count);
+        strip.fill(0, RPM_LED_Pos, LED_Count - RPM_LED_Pos - 1);
 
     /*
       Lights_NotChanged = 0;
@@ -1165,14 +1175,14 @@ void ShiftLight_Strip()
         {
         // Low beam or Parkers
         // Set end LED to dark green
-        strip.fill(0x009900, LED_Count, LED_Count);
+        strip.fill(0x009900, LED_Count - 1, 1);
         }
     //if (HB_CurrentStatus == HIGH)
     if (Light_Status > 3)
         {
         // High beam
         // Set end LED to dark blue
-        strip.fill(0x000099, LED_Count, LED_Count);
+        strip.fill(0x000099, LED_Count - 1, 1);
         }
 
     // Display any warnings on the last LED
@@ -1198,28 +1208,28 @@ void ShiftLight_Strip()
             break;
         case 5:
             // Over temperature
-            // Set end LED to red
-            strip.fill(0xBF0000, LED_Count, LED_Count);
+            // Set end LED to Red
+            strip.fill(0xFF0000, 0, LED_Count);
             break;
         case 4:
             // Fuel Low
             // Set end LED to cyan
-            strip.fill(0x30CFCF, LED_Count, LED_Count);
+            strip.fill(0x30CFCF, LED_Count - 1, 1);
             break;
         case 3:
             // Fan on
             // Set end LED to dark magenta
-            strip.fill(0x690069, LED_Count, LED_Count);
+            //strip.fill(0x690069, LED_Count - 1, 1);
             break;
         case 2:
             // Alternator fault
             // Set end LED to dark orange
-            strip.fill(0xCF4C00, LED_Count, LED_Count);
+            //strip.fill(0xCF4C00, LED_Count - 1, 1);
             break;
         case 1:
             // Bad voltage
             // Set end LED to yellow
-            strip.fill(0xBDBD00, LED_Count, LED_Count);
+            strip.fill(0xBDBD00, LED_Count - 1, 1);
             break;
         case 0:
             // nothing wrong
