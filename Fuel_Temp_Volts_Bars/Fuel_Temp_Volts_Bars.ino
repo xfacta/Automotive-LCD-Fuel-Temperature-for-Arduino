@@ -334,11 +334,13 @@ bool Count_Up = true;
 // Create a colour scheme for number of Neopixel LEDs
 // with off (0) as the first value
 // INVERSE HSV blue/light blue/white
-//uint32_t LED_Colour[] = { 0x000000, 0x0000FF, 0x284BFF, 0x508AFF, 0x78BBFF, 0xA0DFFF, 0xC8F5FF, 0xF0FFFF, 0xFFFFFF };
+//uint32_t LED_Colour[] = { 0x000000, 0x0000FF, 0x0000FF, 0x508AFF, 0x508AFF, 0xA0DFFF, 0xA0DFFF, 0xFFFFFF, 0xFFFFFF };
+// Pink, light Blue, White
+uint32_t LED_Colour[] = { 0x000000, 0xFF00FF, 0x3AA1FF, 0x00D3FF, 0x00EEFF, 0x8FF4FF, 0xCCFAFF, 0xFFFFFF, 0xFFFFFF };
 // RGB red/orange/yellow/white
 //uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFFD470, 0xFFE9B8, 0xFFFFFF, 0xFFFFFF };
 //  green/yellow/orange/red
-uint32_t LED_Colour[] = { 0x000000, 0x00FF00, 0x00FF00, 0xFFFF00, 0xFFFF00, 0xFFAA00, 0xFFAA00, 0xFF4800, 0xFF4800 };
+//uint32_t LED_Colour[] = { 0x000000, 0x00FF00, 0x00FF00, 0xFFFF00, 0xFFFF00, 0xFFAA00, 0xFFAA00, 0xFF4800, 0xFF4800 };
 //uint32_t LED_Colour[] = { 0x000000, 0xFFE500, 0xFFCA00, 0xFFAD00, 0xFF9000, 0xFF7000, 0xFF4B00, 0xFF0000, 0xFF0000 };
 
 
@@ -1107,7 +1109,7 @@ void ShiftLight_Strip()
     if (Demo_Mode)
         {
         // ----------------- FOR TESTING ----------------
-        /*
+
         if (Count_Up)
             {
             RPM_LED_Pos = RPM_LED_Pos + 1;
@@ -1124,8 +1126,8 @@ void ShiftLight_Strip()
                 Count_Up = true;
                 }
             }
-*/
-        RPM_LED_Pos = random(-LED_Count, LED_Count);
+
+        //RPM_LED_Pos = random(-LED_Count, LED_Count);
         // ----------------------------------------------
         }
     else
@@ -1203,13 +1205,27 @@ void ShiftLight_Strip()
         // in reverse order so highest priority is executed first
         case 6:
             // Oil Pressure
-            // Set all LEDs to White
-            strip.fill(0xFFFFFF, 0, LED_Count);
+            // Set all LEDs to Red
+            // with blinking
+            strip.fill(0xFF0000, 0, LED_Count);
+            strip.show();
+            delay(200);
+            strip.clear();strip.show();
+            delay(200);
+            strip.fill(0xFF0000, 0, LED_Count);
+            strip.show();
             break;
         case 5:
             // Over temperature
-            // Set end LED to Red
-            strip.fill(0xFF0000, 0, LED_Count);
+            // Set all LEDs to Orange
+            // with blinking
+            strip.fill(0xCF4C00, 0, LED_Count);
+            strip.show();
+            delay(200);
+            strip.clear();strip.show();
+            delay(200);
+            strip.fill(0xCF4C00, 0, LED_Count);
+            strip.show();
             break;
         case 4:
             // Fuel Low
