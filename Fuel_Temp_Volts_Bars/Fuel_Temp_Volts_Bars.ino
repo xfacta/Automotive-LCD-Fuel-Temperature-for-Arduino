@@ -47,7 +47,7 @@ const float R2      = 3300.0;    // for accurate voltage measurements
 
 // The range of RPM on the neopixel strip is dictated by the output from the RPM module
 // set the length of the NeoPixel shiftlight strip
-int       LED_Count  = 8;
+#define LED_Count 8
 const int LED_Dim    = 10;
 const int LED_Bright = 80;
 
@@ -140,6 +140,7 @@ DS18B20_INT sensor(&oneWire);
 #include <LCDWIKI_KBV.h>    //Hardware-specific library
 
 // Meter colour schemes
+// LCD colours are 16bit
 #define RED2RED           0
 #define GREEN2GREEN       1
 #define BLUE2BLUE         2
@@ -328,20 +329,10 @@ const int Meter_Min = 0;
 */
 
 // NeoPixel shiftlight variables
-int  RPM_LED_Pos;
-bool Count_Up = true;
-
-// Create a colour scheme for number of Neopixel LEDs
-// with off (0) as the first value
-// INVERSE HSV blue/light blue/white
-//uint32_t LED_Colour[] = { 0x000000, 0x0000FF, 0x0000FF, 0x508AFF, 0x508AFF, 0xA0DFFF, 0xA0DFFF, 0xFFFFFF, 0xFFFFFF };
-// Pink, light Blue, White
-uint32_t LED_Colour[] = { 0x000000, 0xFF00FF, 0x3AA1FF, 0x00D3FF, 0x00EEFF, 0x8FF4FF, 0xCCFAFF, 0xFFFFFF, 0xFFFFFF };
-// RGB red/orange/yellow/white
-//uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFFD470, 0xFFE9B8, 0xFFFFFF, 0xFFFFFF };
-//  green/yellow/orange/red
-//uint32_t LED_Colour[] = { 0x000000, 0x00FF00, 0x00FF00, 0xFFFF00, 0xFFFF00, 0xFFAA00, 0xFFAA00, 0xFF4800, 0xFF4800 };
-//uint32_t LED_Colour[] = { 0x000000, 0xFFE500, 0xFFCA00, 0xFFAD00, 0xFF9000, 0xFF7000, 0xFF4B00, 0xFF0000, 0xFF0000 };
+int      RPM_LED_Pos;
+bool     Count_Up       = true;
+uint32_t Initial_Colour = 0x0000FF;
+uint32_t LED_Colour[LED_Count];
 
 
 
@@ -364,6 +355,30 @@ void setup()
     while (--count)
         seed = (seed << 1) | (analogRead(A6) & 1);
     randomSeed(seed);
+
+    // Create a colour scheme for number of Neopixel LEDs
+    // with black as the first value and white as the last value
+    // LED colours are 32 bit
+    LED_Colour[0]         = 0x000000;
+    LED_Colour[1]         = Initial_Colour;
+    LED_Colour[LED_Count] = 0xFFFFFF;
+    uint32_t colour_step  = (LED_Colour[LED_Count] - Initial_Colour) / LED_Count;
+    for (int i = 2; i < LED_Count; i++)
+        {
+        LED_Colour[i] = Initial_Colour + (i - 1) * colour_step;
+        }
+
+    // Manually created colour schemes
+    // INVERSE HSV blue/light blue/white
+    //uint32_t LED_Colour[] = { 0x000000, 0x0000FF, 0x0000FF, 0x508AFF, 0x508AFF, 0xA0DFFF, 0xA0DFFF, 0xFFFFFF, 0xFFFFFF };
+    // ---> use this one
+    // Pink, light Blue, White
+    //uint32_t LED_Colour[] = { 0x000000, 0xFF00FF, 0x3AA1FF, 0x00D3FF, 0x00EEFF, 0x8FF4FF, 0xCCFAFF, 0xFFFFFF, 0xFFFFFF };
+    // RGB red/orange/yellow/white
+    //uint32_t LED_Colour[] = { 0x000000, 0xE64C00, 0xF27500, 0xFA9B00, 0xFFBF00, 0xFFD470, 0xFFE9B8, 0xFFFFFF, 0xFFFFFF };
+    //  green/yellow/orange/red
+    //uint32_t LED_Colour[] = { 0x000000, 0x00FF00, 0x00FF00, 0xFFFF00, 0xFFFF00, 0xFFAA00, 0xFFAA00, 0xFF4800, 0xFF4800 };
+    //uint32_t LED_Colour[] = { 0x000000, 0xFFE500, 0xFFCA00, 0xFFAD00, 0xFF9000, 0xFF7000, 0xFF4B00, 0xFF0000, 0xFF0000 };
 
     // INITIALIZE NeoPixel strip
     // before initialising the LCD panel
@@ -453,7 +468,6 @@ void setup()
         delay(50);
         }
     strip.clear();
-
 
     // Check - cant have both modes at once
     if (Calibration_Mode)
@@ -1210,7 +1224,8 @@ void ShiftLight_Strip()
             strip.fill(0xFF0000, 0, LED_Count);
             strip.show();
             delay(200);
-            strip.clear();strip.show();
+            strip.clear();
+            strip.show();
             delay(200);
             strip.fill(0xFF0000, 0, LED_Count);
             strip.show();
@@ -1222,7 +1237,8 @@ void ShiftLight_Strip()
             strip.fill(0xCF4C00, 0, LED_Count);
             strip.show();
             delay(200);
-            strip.clear();strip.show();
+            strip.clear();
+            strip.show();
             delay(200);
             strip.fill(0xCF4C00, 0, LED_Count);
             strip.show();
