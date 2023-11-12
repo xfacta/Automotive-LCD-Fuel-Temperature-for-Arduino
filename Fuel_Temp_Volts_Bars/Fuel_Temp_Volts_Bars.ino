@@ -5,7 +5,7 @@
 *   Temperature is used to control a fan           *
 *   A LED strip is used for some warnings          *
 *   and a shiftlight function                      *
-*   This gauge is used in landscape mode           *
+*   This gauge is used in portrait mode            *
 *                                                  *
 ***************************************************/
 
@@ -230,6 +230,7 @@ const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 const int SD_Select = 53;
 
 // Pin definitions for digital inputs
+// Mega2560 Serial2 pins 17(RX), 16(TX)
 const int Oil_Press_Pin    = 0;    // Oil pressure digital input pin
 const int Parker_Light_Pin = 1;    // Parker lights digital input pin
 const int Low_Beam_Pin     = 2;    // Low beam digital input pin
@@ -238,7 +239,6 @@ const int Pbrake_Input_Pin = 4;    // Park brake input pin
 const int VSS_Input_Pin    = 5;    // Speed frequency input pin
 const int RPM_Input_Pin    = 6;    // RPM frequency INPUT pin
 const int Button_Pin       = 7;    // Button momentary input
-// const int RPM_Serial_In_Pin = 8;    // Input PWM signal representing RPM - Serial2 17(RX), 16(TX)
 
 // Pin definitions for analog inputs
 const int Temp_Pin       = A0;    // Temperature analog input pin - OneWire sensor on pin 14
@@ -247,7 +247,7 @@ const int Batt_Volt_Pin  = A2;    // Voltage analog input pin
 const int Alternator_Pin = A3;    // Alternator indicator analog input pin
 
 // Pin definitions for outputs
-// #define RPM_Serial_Out_Pin 9     // Output of RPM as a PWM signal for shift light - Serial2 17(RX), 16(TX)
+// Mega2560 Serial2 pins 17(RX), 16(TX)
 const int LED_Pin        = 10;    // NeoPixel LED pin
 const int Warning_Pin    = 11;    // Link to external Leonardo for general warning sounds
 const int OP_Warning_Pin = 12;    // Link to external Leonardo for oil pressure warning sound
