@@ -840,7 +840,9 @@ void Update_Temperature()
         if (Status_Priority == 5)
             Status_Priority = 0;
         Warn_Text_Colour = LCD_WHITE;
-        if (Temp_Celsius < Low_Temp || Temp_Celsius >= Fan_On_Temp)
+        if (Temp_Celsius <= Low_Temp)
+            Warn_Text_Colour = LCD_CYAN;
+        if (Temp_Celsius >= Fan_On_Temp)
             Warn_Text_Colour = LCD_YELLOW;
         if (Temp_Celsius >= Alert_Temp)
             {
@@ -1041,13 +1043,13 @@ void Display_Warning_Text()
             case 4:
                 // Low fuel
                 digitalWrite(Warning_Pin, Valid_Warning);
-                my_lcd.Set_Text_colour(LCD_CYAN);
+                my_lcd.Set_Text_colour(LCD_YELLOW);
                 my_lcd.Set_Text_Back_colour(LCD_BLACK);
                 my_lcd.Print_String("  FUEL  ", Status_Text_X, Status_Text_Y);
                 break;
             case 3:
                 // Fan is on
-                my_lcd.Set_Text_colour(LCD_MAGENTA);
+                my_lcd.Set_Text_colour(Text_Colour2);
                 my_lcd.Set_Text_Back_colour(LCD_BLACK);
                 my_lcd.Print_String(" FAN ON ", Status_Text_X, Status_Text_Y);
                 break;
@@ -1240,7 +1242,7 @@ void ShiftLight_Strip()
         case 4:
             // Fuel Low
             // Set end LED to cyan
-            strip.fill(0x30CFCF, LED_Count - 1, 1);
+            //strip.fill(0x30CFCF, LED_Count - 1, 1);
             break;
         case 3:
             // Fan on
@@ -1250,12 +1252,12 @@ void ShiftLight_Strip()
         case 2:
             // Alternator fault
             // Set end LED to dark orange
-            strip.fill(0xCF4C00, LED_Count - 1, 1);
+            //strip.fill(0xCF4C00, LED_Count - 1, 1);
             break;
         case 1:
             // Bad voltage
             // Set end LED to yellow
-            strip.fill(0xBDBD00, LED_Count - 1, 1);
+            //strip.fill(0xBDBD00, LED_Count - 1, 1);
             break;
         case 0:
             // nothing wrong
