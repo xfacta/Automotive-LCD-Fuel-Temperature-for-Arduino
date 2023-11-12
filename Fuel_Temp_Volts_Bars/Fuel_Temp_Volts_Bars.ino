@@ -1,3 +1,19 @@
+/***************************************************
+*                                                  *
+*   Arduino Mega2560 based LCD automotive gauge    *
+*   for displaying temperature, fuel and voltage   *
+*   Temperature is used to control a fan           *
+*   A LED strip is used for some warnings          *
+*   and a shiftlight function                      *
+*   This gauge is used in landscape mode           *
+*                                                  *
+***************************************************/
+
+
+// Just in case you are not using the Arduino IDE
+#include <arduino.h>
+
+
 /*
   FuelLevel Temperature and Voltage barmeters
   including range warning and fan control
@@ -48,7 +64,7 @@ const float R2      = 3300.0;    // for accurate voltage measurements
 
 // The range of RPM on the neopixel strip is dictated by the output from the RPM module
 // set the length of the NeoPixel shiftlight strip
-#define LED_Count 8
+const int LED_Count  = 8;
 const int LED_Dim    = 10;
 const int LED_Bright = 80;
 
@@ -211,31 +227,31 @@ int  Block_Fill_Colour = LCD_GREY;         // or VGA_BLACK
 const float Input_Multiplier = vcc_ref / 1024.0 / (R2 / (R1 + R2));
 
 // Common pin definitions
-#define SD_Select 53
+const int SD_Select = 53;
 
 // Pin definitions for digital inputs
-#define Oil_Press_Pin    0    // Oil pressure digital input pin
-#define Parker_Light_Pin 1    // Parker lights digital input pin
-#define Low_Beam_Pin     2    // Low beam digital input pin
-#define High_Beam_Pin    3    // High beam digital input pin
-#define Pbrake_Input_Pin 4    // Park brake input pin
-#define VSS_Input_Pin    5    // Speed frequency input pin
-#define RPM_Input_Pin    6    // RPM frequency INPUT pin
-#define Button_Pin       7    // Button momentary input
-// #define RPM_Serial_In_Pin 8    // Input PWM signal representing RPM - Serial2 17(RX), 16(TX)
+const int Oil_Press_Pin    = 0;    // Oil pressure digital input pin
+const int Parker_Light_Pin = 1;    // Parker lights digital input pin
+const int Low_Beam_Pin     = 2;    // Low beam digital input pin
+const int High_Beam_Pin    = 3;    // High beam digital input pin
+const int Pbrake_Input_Pin = 4;    // Park brake input pin
+const int VSS_Input_Pin    = 5;    // Speed frequency input pin
+const int RPM_Input_Pin    = 6;    // RPM frequency INPUT pin
+const int Button_Pin       = 7;    // Button momentary input
+// const int RPM_Serial_In_Pin = 8;    // Input PWM signal representing RPM - Serial2 17(RX), 16(TX)
 
 // Pin definitions for analog inputs
-#define Temp_Pin       A0    // Temperature analog input pin - OneWire sensor on pin 14
-#define Fuel_Pin       A1    // Fuel level analog input pin
-#define Batt_Volt_Pin  A2    // Voltage analog input pin
-#define Alternator_Pin A3    // Alternator indicator analog input pin
+const int Temp_Pin       = A0;    // Temperature analog input pin - OneWire sensor on pin 14
+const int Fuel_Pin       = A1;    // Fuel level analog input pin
+const int Batt_Volt_Pin  = A2;    // Voltage analog input pin
+const int Alternator_Pin = A3;    // Alternator indicator analog input pin
 
 // Pin definitions for outputs
 // #define RPM_Serial_Out_Pin 9     // Output of RPM as a PWM signal for shift light - Serial2 17(RX), 16(TX)
-#define LED_Pin        10    // NeoPixel LED pin
-#define Warning_Pin    11    // Link to external Leonardo for general warning sounds
-#define OP_Warning_Pin 12    // Link to external Leonardo for oil pressure warning sound
-#define Relay_Pin      13    // Relay for fan control
+const int LED_Pin        = 10;    // NeoPixel LED pin
+const int Warning_Pin    = 11;    // Link to external Leonardo for general warning sounds
+const int OP_Warning_Pin = 12;    // Link to external Leonardo for oil pressure warning sound
+const int Relay_Pin      = 13;    // Relay for fan control
 
 // Define the NeoPixel strip object:
 Adafruit_NeoPixel strip(LED_Count, LED_Pin, NEO_GRB + NEO_KHZ800);
