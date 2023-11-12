@@ -15,10 +15,11 @@
   Offloaded sounds to external Leonardo Tiny
   Uses multimap instead of formulas for temperature and fuel level
   Dummy analog reads discarded before real read to allow ADC to settle
+  Changed to using c-strings
 */
 
 
-#define Version "Fuel Temp Bar V16"
+#define Version "Fuel Temp Bar V17"
 
 
 
@@ -27,18 +28,18 @@
 //========================================================================
 
 // set true for using Onewire DS18B20 temperature sensor
-const bool Use_DS18B20           = true;
+const bool  Use_DS18B20           = true;
 
-int        Fan_On_Hyst           = 20000;    // msec Hysteresis, minimum run time of fan
-const int  Fan_On_Temp           = 89;       // degrees C fan on
-const int  Alert_Temp            = 98;       // degrees C alert level
-const int  Low_Temp              = 71;       // degree C for low temperatures
-const int  Volts_Low             = 133;      // low volts warning level x10
-const int  Volts_High            = 144;      // high volts warning level x10
+int         Fan_On_Hyst           = 20000;    // msec Hysteresis, minimum run time of fan
+const int   Fan_On_Temp           = 89;       // degrees C fan on
+const int   Alert_Temp            = 98;       // degrees C alert level
+const int   Low_Temp              = 71;       // degree C for low temperatures
+const float Volts_Low             = 13.3;     // low volts warning level
+const float Volts_High            = 14.4;     // high volts warning level
 
-const bool Valid_Warning         = LOW;     // set high or low for valid warnings to be passed to external processing
-const bool Fan_On                = HIGH;    // set high or low for operating the fan relay
-const bool Digitial_Input_Active = LOW;     // set whether digitial inputs are Low or High for active
+const bool  Valid_Warning         = LOW;     // set high or low for valid warnings to be passed to external processing
+const bool  Fan_On                = HIGH;    // set high or low for operating the fan relay
+const bool  Digitial_Input_Active = LOW;     // set whether digitial inputs are Low or High for active
 
 // Set these to ensure correct voltage readings of analog inputs
 const float vcc_ref = 4.92;      // measure the 5 volts DC and set it here
@@ -141,40 +142,40 @@ DS18B20_INT sensor(&oneWire);
 
 // Meter colour schemes
 // LCD colours are 16bit
-#define RED2RED           0
-#define GREEN2GREEN       1
-#define BLUE2BLUE         2
-#define BLUE2RED          3
-#define GREEN2RED         4
-#define RED2GREEN         5
-#define RED2BLUE          6
+#define RED2RED         0
+#define GREEN2GREEN     1
+#define BLUE2BLUE       2
+#define BLUE2RED        3
+#define GREEN2RED       4
+#define RED2GREEN       5
+#define RED2BLUE        6
 
-#define METER_BLACK       0x0000 /*   0,   0,   0 */
-#define METER_NAVY        0x000F /*   0,   0, 128 */
-#define METER_DARKGREEN   0x1684 /*   0, 128,   0 */
-#define METER_DARKCYAN    0x03EF /*   0, 128, 128 */
-#define METER_MAROON      0x7800 /* 128,   0,   0 */
-#define METER_PURPLE      0x780F /* 128,   0, 128 */
-#define METER_OLIVE       0x7BE0 /* 128, 128,   0 */
-#define METER_LIGHTGREY   0xC618 /* 192, 192, 192 */
-#define METER_DARKGREY    0x4A69 /*  80,  80,  80 */
-#define METER_BLUE        0x001F /*   0,   0, 255 */
-#define METER_GREEN       0x07E0 /*   0, 255,   0 */
-#define METER_CYAN        0x07FF /*   0, 255, 255 */
-#define METER_RED         0xF800 /* 255,   0,   0 */
-#define METER_MAGENTA     0xF81F /* 255,   0, 255 */
-#define METER_YELLOW      0xFFE0 /* 255, 255,   0 */
-#define METER_WHITE       0xFFFF /* 255, 255, 255 */
-#define METER_ORANGE      0xFD20 /* 255, 165,   0 */
-#define METER_GREENYELLOW 0xAFE5 /* 173, 255,  47 */
-#define METER_PINK        0xF81F
-#define METER_GREY        0x2104    // Dark grey 16 bit colour
+#define LCD_BLACK       0x0000 /*   0,   0,   0 */
+#define LCD_NAVY        0x000F /*   0,   0, 128 */
+#define LCD_DARKGREEN   0x1684 /*   0, 128,   0 */
+#define LCD_DARKCYAN    0x03EF /*   0, 128, 128 */
+#define LCD_MAROON      0x7800 /* 128,   0,   0 */
+#define LCD_PURPLE      0x780F /* 128,   0, 128 */
+#define LCD_OLIVE       0x7BE0 /* 128, 128,   0 */
+#define LCD_LIGHTGREY   0xC618 /* 192, 192, 192 */
+#define LCD_DARKGREY    0x4A69 /*  80,  80,  80 */
+#define LCD_BLUE        0x001F /*   0,   0, 255 */
+#define LCD_GREEN       0x07E0 /*   0, 255,   0 */
+#define LCD_CYAN        0x07FF /*   0, 255, 255 */
+#define LCD_RED         0xF800 /* 255,   0,   0 */
+#define LCD_MAGENTA     0xF81F /* 255,   0, 255 */
+#define LCD_YELLOW      0xFFE0 /* 255, 255,   0 */
+#define LCD_WHITE       0xFFFF /* 255, 255, 255 */
+#define LCD_ORANGE      0xFD20 /* 255, 165,   0 */
+#define LCD_GREENYELLOW 0xAFE5 /* 173, 255,  47 */
+#define LCD_PINK        0xF81F
+#define LCD_GREY        0x2104    // Dark grey 16 bit colour
 
 // Change some colours because backlight control is not available
 bool Dim_Mode          = false;
-int  Text_Colour1      = METER_WHITE;        // or VGA_SILVER
-int  Text_Colour2      = METER_LIGHTGREY;    // or VGA_GRAY
-int  Block_Fill_Colour = METER_GREY;         // or VGA_BLACK
+int  Text_Colour1      = LCD_WHITE;        // or VGA_SILVER
+int  Text_Colour2      = LCD_LIGHTGREY;    // or VGA_GRAY
+int  Block_Fill_Colour = LCD_GREY;         // or VGA_BLACK
 
 
 
@@ -251,10 +252,10 @@ Adafruit_NeoPixel strip(LED_Count, LED_Pin, NEO_GRB + NEO_KHZ800);
 LCDWIKI_KBV my_lcd(ILI9481, 40, 38, 39, -1, 41);    //model,cs,cd,wr,rd,reset
 
 // Input variables
-int Temp_Celsius, Fuel_Litres, Last_Fuel_Litres;
-int Battery_Volts, Alternator_Volts;
-int Raw_Battery_Volts, Raw_Alternator_Volts;
-int Raw_Value, Dummy;
+int   Temp_Celsius, Fuel_Litres, Last_Fuel_Litres;
+float Battery_Volts, Alternator_Volts;
+int   Raw_Battery_Volts, Raw_Alternator_Volts;
+int   Raw_Value, Dummy;
 
 // Headligh Indicator status
 // variables for state machine
@@ -288,7 +289,7 @@ const int Light_Status_Height = 50;
 // Position of Status text
 const int Status_Text_X   = LCD_Offset_X + 22;
 const int Status_Text_Y   = LCD_Offset_Y + 300;
-String    Status_Text     = "ComingReadyOrNot";
+char      Status_Text[20] = "ComingReadyOrNot";    // a long string so we never overflow
 int       Status_Priority = 0;
 
 // Meter variables
@@ -298,8 +299,8 @@ const int Temp_Bar_X = LCD_Offset_X + 135, Temp_Bar_Y = LCD_Offset_Y + 280;
 const int Bar_Height = 200;
 const int Bar_Width  = 60;
 int       new_val;
-String    reusable_string;
-uint16_t  Warn_Text_Colour = METER_WHITE;
+char      reusable_string[20] = "AreWeThereYet";    // a long string so we never overflow
+uint16_t  Warn_Text_Colour    = LCD_WHITE;
 
 // get valid ranges to scale for the bar meter
 const int Fuel_Min = fuel_cal_out[fuel_sample_size - 1];
@@ -413,9 +414,9 @@ void setup()
     // Display startup text
     my_lcd.Init_LCD();
     my_lcd.Set_Rotation(4);
-    my_lcd.Fill_Screen(METER_BLACK);
-    my_lcd.Set_Text_Back_colour(METER_BLACK);
-    my_lcd.Set_Text_colour(METER_LIGHTGREY);
+    my_lcd.Fill_Screen(LCD_BLACK);
+    my_lcd.Set_Text_Back_colour(LCD_BLACK);
+    my_lcd.Set_Text_colour(LCD_LIGHTGREY);
     my_lcd.Set_Text_Size(2);
     my_lcd.Print_String(Version, CENTER, LCD_Offset_Y + 160);
     delay(1000);
@@ -427,8 +428,8 @@ void setup()
             {
             Missing_DS18B20 = true;
             // Display warning for missing DS8B20 sensor
-            my_lcd.Fill_Screen(METER_BLACK);
-            my_lcd.Set_Text_colour(METER_ORANGE);
+            my_lcd.Fill_Screen(LCD_BLACK);
+            my_lcd.Set_Text_colour(LCD_ORANGE);
             my_lcd.Set_Text_Size(4);
             my_lcd.Print_String("MISSING", CENTER, LCD_Offset_Y + 100);
             my_lcd.Print_String("TEMP", CENTER, LCD_Offset_Y + 140);
@@ -440,10 +441,10 @@ void setup()
         }
 
     // Display static text
-    my_lcd.Fill_Screen(METER_BLACK);
-    my_lcd.Set_Text_Back_colour(METER_BLACK);
+    my_lcd.Fill_Screen(LCD_BLACK);
+    my_lcd.Set_Text_Back_colour(LCD_BLACK);
     my_lcd.Set_Text_Size(3);
-    my_lcd.Set_Text_colour(METER_WHITE);
+    my_lcd.Set_Text_colour(LCD_WHITE);
     my_lcd.Print_String("F", Fuel_Bar_X - 25, Fuel_Bar_Y - (Bar_Height / 2) - 40);
     my_lcd.Print_String("T", Temp_Bar_X + Bar_Width + 10, Temp_Bar_Y - (Bar_Height / 2) - 40);
 
@@ -535,12 +536,6 @@ void loop()
         if (Startup_Mode)
             Startup_Mode = false;
 
-        if (Debug_Mode)
-            {
-            Serial.print("Calibration Mode ");
-            Serial.println(Calibration_Mode);
-            }
-
         Long_Loop_Time = millis();
         }    // end long loop
 
@@ -599,16 +594,16 @@ void Update_Dim_Status()
         // Normal colours when headlights are off
         {
         Dim_Mode          = false;
-        Text_Colour1      = METER_WHITE;
-        Text_Colour2      = METER_LIGHTGREY;
-        Block_Fill_Colour = METER_GREY;
+        Text_Colour1      = LCD_WHITE;
+        Text_Colour2      = LCD_LIGHTGREY;
+        Block_Fill_Colour = LCD_GREY;
         }
     else
         {
         Dim_Mode          = true;
-        Text_Colour1      = METER_LIGHTGREY;
-        Text_Colour2      = METER_DARKGREY;
-        Block_Fill_Colour = METER_BLACK;
+        Text_Colour1      = LCD_LIGHTGREY;
+        Text_Colour2      = LCD_DARKGREY;
+        Block_Fill_Colour = LCD_BLACK;
         }
 
 
@@ -662,17 +657,17 @@ void Update_Fuel()
     if (Calibration_Mode)
         // show raw calibration values
         {
-        Fuel_Litres     = Raw_Value;
-        reusable_string = String(Fuel_Litres);
+        Fuel_Litres = Raw_Value;
+        itoa(Fuel_Litres, reusable_string, 10);
         if (Fuel_Litres < 10)
-            reusable_string = reusable_string + " ";
+            strcat(reusable_string, " ");
         if (Fuel_Litres < 100)
-            reusable_string = reusable_string + " ";
+            strcat(reusable_string, " ");
         if (Fuel_Litres < 1000)
-            reusable_string = reusable_string + " ";
-        my_lcd.Set_Text_Back_colour(METER_BLACK);
+            strcat(reusable_string, " ");
+        my_lcd.Set_Text_Back_colour(LCD_BLACK);
         my_lcd.Set_Text_Size(3);
-        my_lcd.Set_Text_colour(METER_WHITE);
+        my_lcd.Set_Text_colour(LCD_WHITE);
         my_lcd.Print_String(reusable_string, Fuel_Bar_X - 30, Fuel_Bar_Y - (Bar_Height / 2));
         }
 
@@ -709,14 +704,14 @@ void Update_Fuel()
         Last_Fuel_Litres = Fuel_Litres;
 
         // Change text colours depending on remaining fuel
-        Warn_Text_Colour = METER_WHITE;
+        Warn_Text_Colour = LCD_WHITE;
         if (Fuel_Litres < Warning_Fuel * 1.4)
-            Warn_Text_Colour = METER_YELLOW;
+            Warn_Text_Colour = LCD_YELLOW;
         if (Fuel_Litres < Warning_Fuel)
             {
             Status_Change_Time = millis();
             Status_Priority    = 4;
-            Warn_Text_Colour   = METER_RED;
+            Warn_Text_Colour   = LCD_RED;
             }
 
         if (Fuel_Litres >= Warning_Fuel)
@@ -727,10 +722,10 @@ void Update_Fuel()
             }
 
         // Print value using warning text colour
-        reusable_string = String(Fuel_Litres);
+        itoa(Fuel_Litres, reusable_string, 10);
         if (Fuel_Litres < 10)
-            reusable_string = reusable_string + " ";
-        my_lcd.Set_Text_Back_colour(METER_BLACK);
+            strcat(reusable_string, " ");
+        my_lcd.Set_Text_Back_colour(LCD_BLACK);
         my_lcd.Set_Text_Size(2);
         my_lcd.Set_Text_colour(Warn_Text_Colour);
         my_lcd.Print_String(reusable_string, Fuel_Bar_X - 30, Fuel_Bar_Y - (Bar_Height / 2));
@@ -782,18 +777,18 @@ void Update_Temperature()
     if (Calibration_Mode)
         {
         // show raw calibration values
-        Temp_Celsius    = Raw_Value;
+        Temp_Celsius = Raw_Value;
 
-        reusable_string = String(Temp_Celsius);
+        itoa(Temp_Celsius, reusable_string, 10);
         if (Temp_Celsius < 10)
-            reusable_string = reusable_string + " ";
+            strcat(reusable_string, " ");
         if (Temp_Celsius < 100)
-            reusable_string = reusable_string + " ";
+            strcat(reusable_string, " ");
         if (Temp_Celsius < 1000)
-            reusable_string = reusable_string + " ";
-        my_lcd.Set_Text_Back_colour(METER_BLACK);
+            strcat(reusable_string, " ");
+        my_lcd.Set_Text_Back_colour(LCD_BLACK);
         my_lcd.Set_Text_Size(3);
-        my_lcd.Set_Text_colour(METER_WHITE);
+        my_lcd.Set_Text_colour(LCD_WHITE);
         my_lcd.Print_String(reusable_string, Temp_Bar_X + Bar_Width - 30, Temp_Bar_Y - (Bar_Height / 2));
         }
 
@@ -844,23 +839,23 @@ void Update_Temperature()
         // Change text colours depending on temperature
         if (Status_Priority == 5)
             Status_Priority = 0;
-        Warn_Text_Colour = METER_WHITE;
+        Warn_Text_Colour = LCD_WHITE;
         if (Temp_Celsius < Low_Temp || Temp_Celsius >= Fan_On_Temp)
-            Warn_Text_Colour = METER_YELLOW;
+            Warn_Text_Colour = LCD_YELLOW;
         if (Temp_Celsius >= Alert_Temp)
             {
             Status_Priority    = 5;
             Status_Change_Time = millis();
-            Warn_Text_Colour   = METER_RED;
+            Warn_Text_Colour   = LCD_RED;
             }
 
         // Print value using warning text colour
-        reusable_string = String(Temp_Celsius);
+        itoa(Temp_Celsius, reusable_string, 10);
         if (Temp_Celsius < 10)
-            reusable_string = reusable_string + " ";
+            strcat(reusable_string, " ");
         if (Temp_Celsius < 100)
-            reusable_string = reusable_string + " ";
-        my_lcd.Set_Text_Back_colour(METER_BLACK);
+            strcat(reusable_string, " ");
+        my_lcd.Set_Text_Back_colour(LCD_BLACK);
         my_lcd.Set_Text_Size(2);
         my_lcd.Set_Text_colour(Warn_Text_Colour);
         my_lcd.Print_String(reusable_string, Temp_Bar_X + Bar_Width + 10, Temp_Bar_Y - (Bar_Height / 2));
@@ -893,7 +888,7 @@ void Control_Fan()
     // skip the fan control in calibration mode and leave it off
 
     my_lcd.Set_Text_Size(2);
-    my_lcd.Set_Text_Back_colour(METER_BLACK);
+    my_lcd.Set_Text_Back_colour(LCD_BLACK);
 
     // Turn on the fan and remember the time whenever temp is too high
     if (Temp_Celsius >= Fan_On_Temp)
@@ -947,22 +942,20 @@ void Check_Voltages()
     if (Demo_Mode)
         {
         // ----------------- FOR TESTING -----------------
-        //Battery_Volts = 138;
-        Battery_Volts    = 140 + random(0, 20) - random(0, 20);
-        Alternator_Volts = Battery_Volts + random(0, 5) - random(0, 20);
+        //Battery_Volts = 13.8;
+        Battery_Volts    = (140 + random(0, 20) - random(0, 20)) / 10.0;
+        Alternator_Volts = Battery_Volts + random(0, 2) - random(0, 10);
         // -----------------------------------------------
         }
 
     if (!Demo_Mode && !Calibration_Mode)
         {
         // ----------------- FOR REAL -----------------
-        // all volts here multiplied by 10 so it can still be used in integer form
-        // and divided by 10 for display with 2 decimal places
-        Battery_Volts    = round(Raw_Battery_Volts * Input_Multiplier * 10.0);
-        Alternator_Volts = round(Raw_Alternator_Volts * Input_Multiplier * 10.0);
+        Battery_Volts    = Raw_Battery_Volts * Input_Multiplier;
+        Alternator_Volts = Raw_Alternator_Volts * Input_Multiplier;
         // -----------------------------------------------
-        Battery_Volts    = constrain(Battery_Volts, 80, 160);
-        Alternator_Volts = constrain(Alternator_Volts, 60, 160);
+        Battery_Volts    = constrain(Battery_Volts, 8.0, 16.0);
+        Alternator_Volts = constrain(Alternator_Volts, 6.0, 16.0);
         }
 
 
@@ -1019,9 +1012,10 @@ void Display_Warning_Text()
 
     if (Calibration_Mode)
         {
-        my_lcd.Set_Text_colour(METER_WHITE);
-        my_lcd.Set_Text_Back_colour(METER_BLACK);
-        reusable_string = String(Battery_Volts) + " V    ";
+        my_lcd.Set_Text_colour(LCD_WHITE);
+        my_lcd.Set_Text_Back_colour(LCD_BLACK);
+        itoa(Battery_Volts, reusable_string, 10);
+        strcat(reusable_string, " V    ");
         my_lcd.Print_String(reusable_string, Status_Text_X, Status_Text_Y);
         }
     else
@@ -1033,45 +1027,44 @@ void Display_Warning_Text()
             case 6:
                 // Bad oil pressue
                 digitalWrite(OP_Warning_Pin, Valid_Warning);
-                my_lcd.Set_Text_colour(METER_RED);
-                my_lcd.Set_Text_Back_colour(METER_YELLOW);
+                my_lcd.Set_Text_colour(LCD_RED);
+                my_lcd.Set_Text_Back_colour(LCD_YELLOW);
                 my_lcd.Print_String("   OIL  ", Status_Text_X, Status_Text_Y);
                 break;
             case 5:
                 // Over temperature
                 digitalWrite(OP_Warning_Pin, Valid_Warning);
-                my_lcd.Set_Text_colour(METER_RED);
-                my_lcd.Set_Text_Back_colour(METER_BLACK);
+                my_lcd.Set_Text_colour(LCD_RED);
+                my_lcd.Set_Text_Back_colour(LCD_BLACK);
                 my_lcd.Print_String("  TEMP! ", Status_Text_X - 8, Status_Text_Y);
                 break;
             case 4:
                 // Low fuel
                 digitalWrite(Warning_Pin, Valid_Warning);
-                my_lcd.Set_Text_colour(METER_CYAN);
-                my_lcd.Set_Text_Back_colour(METER_BLACK);
+                my_lcd.Set_Text_colour(LCD_CYAN);
+                my_lcd.Set_Text_Back_colour(LCD_BLACK);
                 my_lcd.Print_String("  FUEL  ", Status_Text_X, Status_Text_Y);
                 break;
             case 3:
                 // Fan is on
-                my_lcd.Set_Text_colour(METER_MAGENTA);
-                my_lcd.Set_Text_Back_colour(METER_BLACK);
+                my_lcd.Set_Text_colour(LCD_MAGENTA);
+                my_lcd.Set_Text_Back_colour(LCD_BLACK);
                 my_lcd.Print_String(" FAN ON ", Status_Text_X, Status_Text_Y);
                 break;
             case 2:
                 // Bad alternator
                 digitalWrite(Warning_Pin, !Valid_Warning);
-                my_lcd.Set_Text_colour(METER_ORANGE);
-                my_lcd.Set_Text_Back_colour(METER_BLACK);
+                my_lcd.Set_Text_colour(LCD_ORANGE);
+                my_lcd.Set_Text_Back_colour(LCD_BLACK);
                 my_lcd.Print_String(" CHARGE ", Status_Text_X, Status_Text_Y);
                 break;
             case 1:
                 // Low voltage
                 digitalWrite(Warning_Pin, Valid_Warning);
-                my_lcd.Set_Text_colour(METER_YELLOW);
-                my_lcd.Set_Text_Back_colour(METER_BLACK);
-                reusable_string = " " + String((float(Battery_Volts) / 10.0), 1) + " v  ";
-                if (Battery_Volts < 100)
-                    reusable_string = " " + reusable_string;
+                my_lcd.Set_Text_colour(LCD_YELLOW);
+                my_lcd.Set_Text_Back_colour(LCD_BLACK);
+                dtostrf(Battery_Volts, 5, 1, reusable_string);
+                strcat(reusable_string, " v  ");
                 my_lcd.Print_String(reusable_string, Status_Text_X, Status_Text_Y);
                 break;
             case 0:
@@ -1080,8 +1073,9 @@ void Display_Warning_Text()
                 digitalWrite(Warning_Pin, !Valid_Warning);
                 digitalWrite(OP_Warning_Pin, !Valid_Warning);
                 my_lcd.Set_Text_colour(Text_Colour2);
-                my_lcd.Set_Text_Back_colour(METER_BLACK);
-                reusable_string = " " + String((float(Battery_Volts) / 10.0), 1) + " v  ";
+                my_lcd.Set_Text_Back_colour(LCD_BLACK);
+                dtostrf(Battery_Volts, 5, 1, reusable_string);
+                strcat(reusable_string, " v  ");
                 my_lcd.Print_String(reusable_string, Status_Text_X, Status_Text_Y);
                 break;
             default:
@@ -1161,8 +1155,8 @@ void ShiftLight_Strip()
 
     // display LED_Pos for debugging
     /*
-    my_lcd.Set_Text_Back_colour(METER_BLACK);
-    my_lcd.Set_Text_colour(METER_WHITE);
+    my_lcd.Set_Text_Back_colour(LCD_BLACK);
+    my_lcd.Set_Text_colour(LCD_WHITE);
     my_lcd.Set_Text_Size(2);
     my_lcd.Print_Number_Int(RPM_LED_Pos, CENTER, LCD_Offset_Y + 400, 1, ' ', 10);
     */
@@ -1256,7 +1250,7 @@ void ShiftLight_Strip()
         case 2:
             // Alternator fault
             // Set end LED to dark orange
-            //strip.fill(0xCF4C00, LED_Count - 1, 1);
+            strip.fill(0xCF4C00, LED_Count - 1, 1);
             break;
         case 1:
             // Bad voltage
@@ -1308,11 +1302,11 @@ void Headlight_Status()
         {
         // ignore the digital inputs
         Light_Status = Lights_Off;
-        my_lcd.Set_Draw_color(METER_GREY);
+        my_lcd.Set_Draw_color(LCD_GREY);
         my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
         my_lcd.Set_Text_Size(4);
-        my_lcd.Set_Text_colour(METER_WHITE);
-        my_lcd.Set_Text_Back_colour(METER_GREY);
+        my_lcd.Set_Text_colour(LCD_WHITE);
+        my_lcd.Set_Text_Back_colour(LCD_GREY);
         my_lcd.Print_String("CALIBR", Light_Status_X + 22, Light_Status_Y + 12);
         }
     else
@@ -1324,6 +1318,7 @@ void Headlight_Status()
             }
         else
             {
+            // cant have any lights on at all without the parker lights being on
             Light_Status = Lights_Off;
             }
         if (digitalRead(Low_Beam_Pin) == Digitial_Input_Active)
@@ -1341,35 +1336,35 @@ void Headlight_Status()
                     // do nothing
                     break;
                 case Lights_Off:
-                    my_lcd.Set_Draw_color(METER_GREY);
+                    my_lcd.Set_Draw_color(LCD_GREY);
                     my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
                     my_lcd.Set_Text_Size(4);
-                    my_lcd.Set_Text_colour(METER_BLACK);
-                    my_lcd.Set_Text_Back_colour(METER_GREY);
+                    my_lcd.Set_Text_colour(LCD_BLACK);
+                    my_lcd.Set_Text_Back_colour(LCD_GREY);
                     my_lcd.Print_String("LIGHTS", Light_Status_X + 22, Light_Status_Y + 12);
                     break;
                 case Lights_Park:
-                    my_lcd.Set_Draw_color(METER_YELLOW);
+                    my_lcd.Set_Draw_color(LCD_YELLOW);
                     my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
                     my_lcd.Set_Text_Size(4);
-                    my_lcd.Set_Text_colour(METER_BLACK);
-                    my_lcd.Set_Text_Back_colour(METER_YELLOW);
+                    my_lcd.Set_Text_colour(LCD_BLACK);
+                    my_lcd.Set_Text_Back_colour(LCD_YELLOW);
                     my_lcd.Print_String("PARK", Light_Status_X + 50, Light_Status_Y + 12);
                     break;
                 case Lights_Low:
-                    my_lcd.Set_Draw_color(METER_GREEN);
+                    my_lcd.Set_Draw_color(LCD_GREEN);
                     my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
                     my_lcd.Set_Text_Size(4);
-                    my_lcd.Set_Text_colour(METER_BLACK);
-                    my_lcd.Set_Text_Back_colour(METER_GREEN);
+                    my_lcd.Set_Text_colour(LCD_BLACK);
+                    my_lcd.Set_Text_Back_colour(LCD_GREEN);
                     my_lcd.Print_String("LOW", Light_Status_X + 60, Light_Status_Y + 12);
                     break;
                 case Lights_High:
-                    my_lcd.Set_Draw_color(METER_BLUE);
+                    my_lcd.Set_Draw_color(LCD_BLUE);
                     my_lcd.Fill_Round_Rectangle(Light_Status_X, Light_Status_Y, Light_Status_X + Light_Status_Length, Light_Status_Y + Light_Status_Height, 5);
                     my_lcd.Set_Text_Size(4);
-                    my_lcd.Set_Text_colour(METER_BLACK);
-                    my_lcd.Set_Text_Back_colour(METER_BLUE);
+                    my_lcd.Set_Text_colour(LCD_BLACK);
+                    my_lcd.Set_Text_Back_colour(LCD_BLUE);
                     my_lcd.Print_String("HIGH", Light_Status_X + 50, Light_Status_Y + 12);
                     break;
                 default:
@@ -1414,14 +1409,14 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
                 block_colour = 0;
                 switch (scheme)
                     {
-                    case 0: block_colour = METER_RED; break;                            // Fixed colour
-                    case 1: block_colour = METER_GREEN; break;                          // Fixed colour
-                    case 2: block_colour = METER_BLUE; break;                           // Fixed colour
+                    case 0: block_colour = LCD_RED; break;                              // Fixed colour
+                    case 1: block_colour = LCD_GREEN; break;                            // Fixed colour
+                    case 2: block_colour = LCD_BLUE; break;                             // Fixed colour
                     case 3: block_colour = rainbow(map(b, 0, segs, 0, 127)); break;     // Blue to red
                     case 4: block_colour = rainbow(map(b, 0, segs, 63, 127)); break;    // Green to red
                     case 5: block_colour = rainbow(map(b, 0, segs, 127, 63)); break;    // Red to green
                     case 6: block_colour = rainbow(map(b, 0, segs, 127, 0)); break;     // Red to blue
-                    default: block_colour = METER_BLUE; break;                          // Fixed colour
+                    default: block_colour = LCD_BLUE; break;                            // Fixed colour
                     }
                 }
             else
