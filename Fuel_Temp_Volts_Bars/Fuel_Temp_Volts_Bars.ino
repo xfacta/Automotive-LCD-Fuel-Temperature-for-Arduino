@@ -30,7 +30,6 @@
   Using Nissan SR20 temperature sensor by default
   Offloaded sounds to external Leonardo Tiny
   Uses multimap instead of formulas for temperature and fuel level
-  Dummy analog reads discarded before real read to allow ADC to settle
   Changed to using c-strings
 */
 
@@ -271,7 +270,7 @@ LCDWIKI_KBV my_lcd(ILI9481, 40, 38, 39, -1, 41);    //model,cs,cd,wr,rd,reset
 int   Temp_Celsius, Fuel_Litres, Last_Fuel_Litres;
 float Battery_Volts, Alternator_Volts;
 int   Raw_Battery_Volts, Raw_Alternator_Volts;
-int   Raw_Value, Dummy;
+int   Raw_Value;
 
 // Headligh Indicator status
 // variables for state machine
@@ -666,8 +665,6 @@ void Update_Fuel()
     // =======================================================
 
     // Read the analog pin
-    // do a read and ignore it, allowing the true value to settle
-    Dummy     = analogRead(Fuel_Pin);
     Raw_Value = analogRead(Fuel_Pin);
 
     if (Calibration_Mode)
@@ -785,8 +782,6 @@ void Update_Temperature()
         {
         // Using any other sensor
         // Read the analog pin
-        // do a read and ignore it, allowing the true value to settle
-        Dummy     = analogRead(Temp_Pin);
         Raw_Value = analogRead(Temp_Pin);
         }
 
@@ -948,9 +943,7 @@ void Check_Voltages()
 
     // Read analog pins
     // do a read and ignore it, allowing the true value to settle
-    Dummy                = analogRead(Batt_Volt_Pin);
     Raw_Battery_Volts    = analogRead(Batt_Volt_Pin);
-    Dummy                = analogRead(Alternator_Pin);
     Raw_Alternator_Volts = analogRead(Alternator_Pin);
 
     // Use raw calibration values
