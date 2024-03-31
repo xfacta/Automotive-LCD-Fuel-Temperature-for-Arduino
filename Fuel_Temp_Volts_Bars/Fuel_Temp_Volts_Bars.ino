@@ -11,7 +11,7 @@
 
 
 // Just in case you are not using the Arduino IDE
-#include <arduino.h>
+//#include <arduino.h>
 
 
 /*
@@ -34,7 +34,7 @@
 */
 
 
-#define Version "Fuel Temp Bar V17"
+#define Version "Fuel Temp Bar V18"
 
 
 
@@ -46,7 +46,8 @@
 const bool  Use_DS18B20           = true;
 
 int         Fan_On_Hyst           = 20000;    // msec Hysteresis, minimum run time of fan
-const int   Fan_On_Temp           = 89;       // degrees C fan on
+const int   Fan_On_Temp           = 90;       // degrees C fan on
+const int   Fan_Off_Temp          = 87;       // degrees C fan off
 const int   Alert_Temp            = 98;       // degrees C alert level
 const int   Low_Temp              = 71;       // degree C for low temperatures
 const float Volts_Low             = 13.3;     // low volts warning level
@@ -57,9 +58,9 @@ const bool  Fan_On                = HIGH;    // set high or low for operating th
 const bool  Digitial_Input_Active = LOW;     // set whether digitial inputs are Low or High for active
 
 // Set these to ensure correct voltage readings of analog inputs
-const float vcc_ref = 4.92;      // measure the 5 volts DC and set it here
-const float R1      = 1200.0;    // measure and set the voltage divider values
-const float R2      = 3300.0;    // for accurate voltage measurements
+const float vcc_ref = 4.92;       // measure the 5 volts DC and set it here
+const float R1      = 15000.0;    // measure and set the voltage divider values
+const float R2      = 33000.0;    // for accurate voltage measurements
 
 // The range of RPM on the neopixel strip is dictated by the output from the RPM module
 // set the length of the NeoPixel shiftlight strip
@@ -688,7 +689,7 @@ void Update_Fuel()
         {
         // ----------------- FOR TESTING -----------------
         //Fuel_Litres = 20;
-        Fuel_Litres = 22 + random(0, 25) - random(0, 25);
+        Fuel_Litres = random(Fuel_Min - 5, Fuel_Max + 10);
         Fuel_Litres = constrain(Fuel_Litres, Fuel_Min, Fuel_Max);
         // -----------------------------------------------
         }
@@ -713,7 +714,7 @@ void Update_Fuel()
         {
         // Limit the change between readings
         // to combat fuel sloshing
-        Fuel_Litres      = (Fuel_Litres + Last_Fuel_Litres) / 2;
+        Fuel_Litres      = constrain(Fuel_Litres, Last_Fuel_Litres - 5 ,  Last_Fuel_Litres + 5 );
         Last_Fuel_Litres = Fuel_Litres;
 
         // Change text colours depending on remaining fuel
@@ -807,7 +808,7 @@ void Update_Temperature()
         {
         // ----------------- FOR TESTING -----------------
         //Temp_Celsius = 15;
-        Temp_Celsius = 80 + random(0, 30) - random(0, 30);
+        Temp_Celsius = random(Temp_Min - 10, Temp_Max +10);
         Temp_Celsius = constrain(Temp_Celsius, Temp_Min, Temp_Max);
         // -----------------------------------------------
         }
@@ -916,7 +917,7 @@ void Control_Fan()
         }
 
     // Turn off the fan when lower than Fan_On_Temp degrees and past the Hysteresis time
-    if ((Temp_Celsius < Fan_On_Temp) && (millis() >= (Fan_On_Time + Fan_On_Hyst)))
+    if ((Temp_Celsius <= Fan_Off_Temp) && (millis() >= (Fan_On_Time + Fan_On_Hyst)))
         {
         // ensure the relay is off
         digitalWrite(Relay_Pin, !Fan_On);
@@ -1397,55 +1398,46 @@ void Headlight_Status()
 void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte scheme)
     {
 
+    /*
+    const int Bar_Height = 200;
+    const int Bar_Width  = 60;
+    */
+
     int block_colour;
-    int y1, y2;
-    int segs = (vmax - vmin) / 20;
-    int g    = h / segs;
 
-    int v    = map(value, vmin, vmax, 0, segs);
+    int v  = map(value, vmin, vmax, 0, Bar_Height);
 
-    // Draw "segs" colour blocks
-    for (int b = 0; b <= segs; b++)
+    int y1 = y - v;
+    int y2 = y - Bar_Height;
+
+    if (!Dim_Mode)
         {
-
-        // Calculate pair of coordinates for segment start and end
-        int y1 = y - b * g;
-        int y2 = y - g - b * g;
-
-        if (v > 0 && b <= v)
+        // Choose colour from scheme
+        switch (scheme)
             {
-            if (!Dim_Mode)
-                {
-                // Choose colour from scheme
-                block_colour = 0;
-                switch (scheme)
-                    {
-                    case 0: block_colour = LCD_RED; break;                              // Fixed colour
-                    case 1: block_colour = LCD_GREEN; break;                            // Fixed colour
-                    case 2: block_colour = LCD_BLUE; break;                             // Fixed colour
-                    case 3: block_colour = rainbow(map(b, 0, segs, 0, 127)); break;     // Blue to red
-                    case 4: block_colour = rainbow(map(b, 0, segs, 63, 127)); break;    // Green to red
-                    case 5: block_colour = rainbow(map(b, 0, segs, 127, 63)); break;    // Red to green
-                    case 6: block_colour = rainbow(map(b, 0, segs, 127, 0)); break;     // Red to blue
-                    default: block_colour = LCD_BLUE; break;                            // Fixed colour
-                    }
-                }
-            else
-                {
-                block_colour = Text_Colour2;
-                }
-
-            // Fill in coloured blocks
-            my_lcd.Set_Draw_color(block_colour);
-            my_lcd.Fill_Rectangle(x, y1, x + w, y2);
-            }
-        // Fill in blank segments
-        else
-            {
-            my_lcd.Set_Draw_color(Block_Fill_Colour);
-            my_lcd.Fill_Rectangle(x, y1, x + w, y2);
+            case 0: block_colour = LCD_RED; break;                                     // Fixed colour
+            case 1: block_colour = LCD_GREEN; break;                                   // Fixed colour
+            case 2: block_colour = LCD_BLUE; break;                                    // Fixed colour
+            case 3: block_colour = rainbow(map(value, vmin, vmax, 0, 127)); break;     // Blue to red
+            case 4: block_colour = rainbow(map(value, vmin, vmax, 63, 127)); break;    // Green to red
+            case 5: block_colour = rainbow(map(value, vmin, vmax, 127, 63)); break;    // Red to green
+            case 6: block_colour = rainbow(map(value, vmin, vmax, 127, 0)); break;     // Red to blue
+            default: block_colour = LCD_BLUE; break;                                   // Fixed colour
             }
         }
+    else
+        {
+        block_colour = Text_Colour2;
+        }
+
+    // Fill in coloured blocks
+    my_lcd.Set_Draw_color(block_colour);
+    my_lcd.Fill_Rectangle(x, y, x + w, y1);
+
+    // Fill in blank segments
+
+    my_lcd.Set_Draw_color(Block_Fill_Colour);
+    my_lcd.Fill_Rectangle(x, y1, x + w, y2);
 
 
     }    // End void barmeter
