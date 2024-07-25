@@ -31,6 +31,7 @@
   Offloaded sounds to external Leonardo Tiny
   Uses multimap instead of formulas for temperature and fuel level
   Changed to using c-strings
+  Added proper switch debouncing
 */
 
 
@@ -55,7 +56,7 @@ const float Volts_High            = 14.4;     // high volts warning level
 
 const bool  Valid_Warning         = LOW;     // set high or low for valid warnings to be passed to external processing
 const bool  Fan_On                = HIGH;    // set high or low for operating the fan relay
-const bool  Digitial_Input_Active = LOW;     // set whether digitial inputs are Low or High for active
+const bool  Digitial_Input_Active = LOW;    // set whether digitial inputs are Low or High for active
 
 // Set these to ensure correct voltage readings of analog inputs
 const float vcc_ref = 4.92;       // measure the 5 volts DC and set it here
@@ -240,6 +241,11 @@ const int VSS_Input_Pin    = 5;    // Speed frequency input pin
 const int RPM_Input_Pin    = 6;    // RPM frequency INPUT pin
 const int Button_Pin       = 7;    // Button momentary input
 
+// Used in the debounce routine
+int switch_pin;
+int debounce_test;
+int debounce_result;
+
 // Pin definitions for analog inputs
 const int Temp_Pin       = A0;    // Temperature analog input pin - OneWire sensor on pin 14
 const int Fuel_Pin       = A1;    // Fuel level analog input pin
@@ -358,7 +364,7 @@ uint32_t LED_Colour[LED_Count];
 
 
 void setup()
-    {
+{
 
     // Start a serial port for sending RPM LED shift light position
     // Serial2 17(RX), 16(TX)
@@ -381,9 +387,9 @@ void setup()
     LED_Colour[LED_Count] = 0xFFFFFF;
     uint32_t colour_step  = (LED_Colour[LED_Count] - Initial_Colour) / LED_Count;
     for (int i = 2; i < LED_Count; i++)
-        {
+    {
         LED_Colour[i] = Initial_Colour + (i - 1) * colour_step;
-        }
+    }
 
     // Manually created colour schemes
     // INVERSE HSV blue/light blue/white
@@ -439,9 +445,9 @@ void setup()
 
     // Using DS8B20 for temperature
     if (Use_DS18B20)
-        {
+    {
         if (!sensor.begin())
-            {
+        {
             Missing_DS18B20 = true;
             // Display warning for missing DS8B20 sensor
             my_lcd.Fill_Screen(LCD_BLACK);
@@ -451,10 +457,10 @@ void setup()
             my_lcd.Print_String("TEMP", CENTER, LCD_Offset_Y + 140);
             my_lcd.Print_String("SENSOR", CENTER, LCD_Offset_Y + 180);
             delay(10000);
-            }
+        }
         else
             Missing_DS18B20 = false;
-        }
+    }
 
     // Display static text
     my_lcd.Fill_Screen(LCD_BLACK);
@@ -467,24 +473,38 @@ void setup()
     // Cylon eye effect during startup
     strip.setBrightness(LED_Bright);
     for (int i = 0; i < LED_Count + 3; i++)
-        {
+    {
         delay(50);
         strip.setPixelColor(i, strip.Color(255, 0, 0));
         strip.setPixelColor(i - 1, strip.Color(50, 0, 0));
         strip.setPixelColor(i - 2, strip.Color(12, 0, 0));
         strip.setPixelColor(i - 3, strip.Color(0, 0, 0));
         strip.show();
-        }
+    }
     for (int i = LED_Count + 3; i > -4; i--)
-        {
+    {
         strip.setPixelColor(i, strip.Color(255, 0, 0));
         strip.setPixelColor(i + 1, strip.Color(50, 0, 0));
         strip.setPixelColor(i + 2, strip.Color(12, 0, 0));
         strip.setPixelColor(i + 3, strip.Color(0, 0, 0));
         strip.show();
         delay(50);
-        }
+    }
     strip.clear();
+
+    // Assign the switch debounce polarity
+    // for low active 0xfe00  and 0xff00
+    // for high active 0x01ff and 0x00ff
+    if (Digitial_Input_Active == HIGH)
+    {
+        debounce_test   = 0x01ff;
+        debounce_result = 0x00ff;
+    }
+    else
+    {
+        debounce_test   = 0xfe00;
+        debounce_result = 0xff00;
+    }
 
     // Check - cant have both modes at once
     if (Calibration_Mode)
@@ -496,7 +516,7 @@ void setup()
     Short_Loop_Time = millis();
 
 
-    }    // end void setup
+}    // end void setup
 
 
 
@@ -506,7 +526,7 @@ void setup()
 
 
 void loop()
-    {
+{
 
 
     // =======================================================
@@ -523,7 +543,7 @@ void loop()
     // =======================================================
 
     if ((millis() >= (Short_Loop_Time + Short_Loop_Interval)) || Startup_Mode == true)
-        {
+    {
         Headlight_Status();
         Display_Warning_Text();
         Check_Button();
@@ -532,7 +552,7 @@ void loop()
             ShiftLight_Strip();
 
         Short_Loop_Time = millis();
-        }    // end short loop
+    }    // end short loop
 
 
     // =======================================================
@@ -540,7 +560,7 @@ void loop()
     // =======================================================
 
     if ((millis() >= (Long_Loop_Time + Long_Loop_Interval)) || Startup_Mode == true)
-        {
+    {
         Check_Voltages();
         Update_Fuel();
         Update_Temperature();
@@ -553,10 +573,10 @@ void loop()
             Startup_Mode = false;
 
         Long_Loop_Time = millis();
-        }    // end long loop
+    }    // end long loop
 
 
-    }    // end void loop
+}    // end void loop
 
 
 // ##################################################################################################################################################
@@ -564,7 +584,7 @@ void loop()
 
 
 void Check_Button()
-    {
+{
 
 
     // =======================================================
@@ -574,32 +594,29 @@ void Check_Button()
     // Toggle the calibration mode
     // delay allows for debounce
     if (!Startup_Mode)
+    {
+        if (debounce(Button_Pin) == Digitial_Input_Active)
         {
-        if (digitalRead(Button_Pin) == Digitial_Input_Active)
+            while (debounce(Button_Pin) == Digitial_Input_Active)
             {
-            // Allow time for the button pin to settle
-            // this assumes some electronic/external debounce
-            delay(10);
-            while (digitalRead(Button_Pin) == Digitial_Input_Active)
-                {
                 // just wait until button released
                 Calibration_Mode = true;
-                }
             }
         }
+    }
     // cant have both demo mode and calibration mode at once
     if (Calibration_Mode)
         Demo_Mode = false;
 
 
-    }    // End void Check_Button
+}    // End void Check_Button
 
 
 // ##################################################################################################################################################
 
 
 void Update_Dim_Status()
-    {
+{
 
 
     // =======================================================
@@ -607,59 +624,59 @@ void Update_Dim_Status()
     // =======================================================
 
     if (Light_Status < 3)
-        // Normal colours when headlights are off
-        {
+    // Normal colours when headlights are off
+    {
         Dim_Mode          = false;
         Text_Colour1      = LCD_WHITE;
         Text_Colour2      = LCD_LIGHTGREY;
         Block_Fill_Colour = LCD_GREY;
-        }
+    }
     else
-        {
+    {
         Dim_Mode          = true;
         Text_Colour1      = LCD_LIGHTGREY;
         Text_Colour2      = LCD_DARKGREY;
         Block_Fill_Colour = LCD_BLACK;
-        }
+    }
 
 
-    }    // End void Update_Dim_Status
+}    // End void Update_Dim_Status
 
 
 // ##################################################################################################################################################
 
 
 void Check_Oil()
-    {
+{
 
     // =======================================================
     // Process the oil pressure here
     // =======================================================
 
-    if (digitalRead(Oil_Press_Pin) == Digitial_Input_Active)
-        {
+    if (debounce(Oil_Press_Pin) == Digitial_Input_Active)
+    {
         Status_Priority    = 6;
         Status_Change_Time = millis();
         // Immediately call the routines to update NeoPixels and status text
         ShiftLight_Strip();
         Display_Warning_Text();
-        }
+    }
     else
-        {
+    {
         // Unset the Oil Pressure warning sound and text if Oil Pressure becomes good
         if (Status_Priority == 6)
             Status_Priority = 0;
-        }
+    }
 
 
-    }    // end void Check_Oil
+}    // end void Check_Oil
 
 
 // ##################################################################################################################################################
 
 
 void Update_Fuel()
-    {
+{
 
     // =======================================================
     // Get the Fuel level and display it
@@ -669,8 +686,8 @@ void Update_Fuel()
     Raw_Value = analogRead(Fuel_Pin);
 
     if (Calibration_Mode)
-        // show raw calibration values
-        {
+    // show raw calibration values
+    {
         Fuel_Litres = Raw_Value;
         itoa(Fuel_Litres, reusable_string, 10);
         if (Fuel_Litres < 10)
@@ -683,19 +700,19 @@ void Update_Fuel()
         my_lcd.Set_Text_Size(3);
         my_lcd.Set_Text_colour(LCD_WHITE);
         my_lcd.Print_String(reusable_string, Fuel_Bar_X - 30, Fuel_Bar_Y - (Bar_Height / 2));
-        }
+    }
 
     if (Demo_Mode)
-        {
+    {
         // ----------------- FOR TESTING -----------------
         //Fuel_Litres = 20;
         Fuel_Litres = random(Fuel_Min - 5, Fuel_Max + 10);
         Fuel_Litres = constrain(Fuel_Litres, Fuel_Min, Fuel_Max);
         // -----------------------------------------------
-        }
+    }
 
     if (!Demo_Mode && !Calibration_Mode)
-        {
+    {
         // ----------------- FOR REAL -----------------
 
         // Fuel level formula for standard Datsun 1600 tank sender
@@ -708,13 +725,13 @@ void Update_Fuel()
         Fuel_Litres = multiMap<int>(Raw_Value, fuel_cal_in, fuel_cal_out, fuel_sample_size);
 
         // -----------------------------------------------
-        }
+    }
 
     if (!Calibration_Mode)
-        {
+    {
         // Limit the change between readings
         // to combat fuel sloshing
-        Fuel_Litres      = constrain(Fuel_Litres, Last_Fuel_Litres - 5 ,  Last_Fuel_Litres + 5 );
+        Fuel_Litres      = constrain(Fuel_Litres, Last_Fuel_Litres - 5, Last_Fuel_Litres + 5);
         Last_Fuel_Litres = Fuel_Litres;
 
         // Change text colours depending on remaining fuel
@@ -722,18 +739,18 @@ void Update_Fuel()
         if (Fuel_Litres < Warning_Fuel * 1.4)
             Warn_Text_Colour = LCD_YELLOW;
         if (Fuel_Litres < Warning_Fuel)
-            {
+        {
             Status_Change_Time = millis();
             Status_Priority    = 4;
             Warn_Text_Colour   = LCD_RED;
-            }
+        }
 
         if (Fuel_Litres >= Warning_Fuel)
-            {
+        {
             // Unset the fuel warning status if it was already set
             if (Status_Priority == 4)
                 Status_Priority = 0;
-            }
+        }
 
         // Print value using warning text colour
         itoa(Fuel_Litres, reusable_string, 10);
@@ -747,10 +764,10 @@ void Update_Fuel()
         // Draw fuel meter
         new_val = map(Fuel_Litres, Fuel_Min, Fuel_Max, Meter_Min, Meter_Max);
         Bar_Meter(new_val, Meter_Min, Meter_Max, Fuel_Bar_X, Fuel_Bar_Y, Bar_Width, Bar_Height, RED2BLUE);
-        }
+    }
 
 
-    }    // End void Update_Fuel
+}    // End void Update_Fuel
 
 
 
@@ -759,7 +776,7 @@ void Update_Fuel()
 
 
 void Update_Temperature()
-    {
+{
 
 
     // =======================================================
@@ -768,26 +785,26 @@ void Update_Temperature()
 
     // Using DS8B20 for temperature
     if (Use_DS18B20 && !Missing_DS18B20)
-        {
+    {
         sensor.requestTemperatures();
         while (!sensor.isConversionComplete())
             ;    // just wait until a valid temperature
         Raw_Value = sensor.getTempC();
         if (Raw_Value == -127)
-            {
+        {
             // Sensor fault
             Missing_DS18B20 = true;
-            }
         }
+    }
     else
-        {
+    {
         // Using any other sensor
         // Read the analog pin
         Raw_Value = analogRead(Temp_Pin);
-        }
+    }
 
     if (Calibration_Mode)
-        {
+    {
         // show raw calibration values
         Temp_Celsius = Raw_Value;
 
@@ -802,19 +819,19 @@ void Update_Temperature()
         my_lcd.Set_Text_Size(3);
         my_lcd.Set_Text_colour(LCD_WHITE);
         my_lcd.Print_String(reusable_string, Temp_Bar_X + Bar_Width - 30, Temp_Bar_Y - (Bar_Height / 2));
-        }
+    }
 
     if (Demo_Mode)
-        {
+    {
         // ----------------- FOR TESTING -----------------
         //Temp_Celsius = 15;
-        Temp_Celsius = random(Temp_Min - 10, Temp_Max +10);
+        Temp_Celsius = random(Temp_Min - 10, Temp_Max + 10);
         Temp_Celsius = constrain(Temp_Celsius, Temp_Min, Temp_Max);
         // -----------------------------------------------
-        }
+    }
 
     if (!Demo_Mode && !Calibration_Mode)
-        {
+    {
         // ----------------- FOR REAL -----------------
         // Comment or uncomment different sections here
         // for different sensors
@@ -829,24 +846,24 @@ void Update_Temperature()
         //Temp_Celsius = constrain(Temp_Celsius, Temp_Min, Temp_Max);
 
         if (Use_DS18B20)
-            {
+        {
             // stay within 0 to 125 celcius, so we dont have to process negative numbers
             Temp_Celsius = constrain(Raw_Value, 0, 125);
             if (Missing_DS18B20)
                 Temp_Celsius = Alert_Temp;
-            }
+        }
         else
-            {
+        {
             // Scale the anolog reading to a real celcius value
             // this also has the effect of being a Constraint
             Temp_Celsius = multiMap<int>(Raw_Value, temp_cal_in, temp_cal_out, temp_sample_size);
-            }
-
-        // ----------------- End real measurement ------
         }
 
+        // ----------------- End real measurement ------
+    }
+
     if (!Calibration_Mode)
-        {
+    {
 
         // Change text colours depending on temperature
         if (Status_Priority == 5)
@@ -857,11 +874,11 @@ void Update_Temperature()
         if (Temp_Celsius >= Fan_On_Temp)
             Warn_Text_Colour = LCD_YELLOW;
         if (Temp_Celsius >= Alert_Temp)
-            {
+        {
             Status_Priority    = 5;
             Status_Change_Time = millis();
             Warn_Text_Colour   = LCD_RED;
-            }
+        }
 
         // Print value using warning text colour
         itoa(Temp_Celsius, reusable_string, 10);
@@ -879,10 +896,10 @@ void Update_Temperature()
         // even though DS18B20 digits may be outside that range
         new_val = map(Temp_Celsius, Temp_Min, Temp_Max, Meter_Min, Meter_Max);
         Bar_Meter(new_val, Meter_Min, Meter_Max, Temp_Bar_X, Temp_Bar_Y, Bar_Width, Bar_Height, BLUE2RED);
-        }
+    }
 
 
-    }    // End void Update_Temperature
+}    // End void Update_Temperature
 
 
 
@@ -891,7 +908,7 @@ void Update_Temperature()
 
 
 void Control_Fan()
-    {
+{
 
 
     // =======================================================
@@ -906,7 +923,7 @@ void Control_Fan()
 
     // Turn on the fan and remember the time whenever temp is too high
     if (Temp_Celsius >= Fan_On_Temp)
-        {
+    {
         // set the Fan_On_Time every loop until the temp drops
         // ensure the relay is on
         digitalWrite(Relay_Pin, Fan_On);
@@ -914,19 +931,19 @@ void Control_Fan()
         if (Status_Priority != 5)
             Status_Priority = 3;
         Status_Change_Time = millis();
-        }
+    }
 
     // Turn off the fan when lower than Fan_On_Temp degrees and past the Hysteresis time
     if ((Temp_Celsius <= Fan_Off_Temp) && (millis() >= (Fan_On_Time + Fan_On_Hyst)))
-        {
+    {
         // ensure the relay is off
         digitalWrite(Relay_Pin, !Fan_On);
         if (Status_Priority == 3)
             Status_Priority = 0;
-        }
+    }
 
 
-    }    // end void Control_Fan
+}    // end void Control_Fan
 
 
 
@@ -935,7 +952,7 @@ void Control_Fan()
 
 
 void Check_Voltages()
-    {
+{
 
 
     // =======================================================
@@ -952,55 +969,55 @@ void Check_Voltages()
         Battery_Volts = Raw_Battery_Volts;
 
     if (Demo_Mode)
-        {
+    {
         // ----------------- FOR TESTING -----------------
         //Battery_Volts = 13.8;
         Battery_Volts    = (140 + random(0, 20) - random(0, 20)) / 10.0;
         Alternator_Volts = Battery_Volts + random(0, 2) - random(0, 10);
         // -----------------------------------------------
-        }
+    }
 
     if (!Demo_Mode && !Calibration_Mode)
-        {
+    {
         // ----------------- FOR REAL -----------------
         Battery_Volts    = Raw_Battery_Volts * Input_Multiplier;
         Alternator_Volts = Raw_Alternator_Volts * Input_Multiplier;
         // -----------------------------------------------
         Battery_Volts    = constrain(Battery_Volts, 8.0, 16.0);
         Alternator_Volts = constrain(Alternator_Volts, 6.0, 16.0);
-        }
+    }
 
 
 
     if ((millis() - Status_Change_Time) > (Long_Loop_Interval * 2))
-        {
+    {
         // wait until other warnings have had a chance to be displayed
         // voltages all good
         if ((Alternator_Volts >= (Battery_Volts * 0.9)) && (Battery_Volts < Volts_High))
-            {
+        {
             Status_Priority = 0;
-            }
+        }
         // battery voltage out of range
         if (Battery_Volts <= Volts_Low || Battery_Volts >= Volts_High)
-            {
+        {
             Status_Priority = 1;
-            }
+        }
         // alternator not working
         if ((Alternator_Volts < (Battery_Volts * 0.9)) && Startup_Mode == false)
-            {
+        {
             Status_Priority = 2;
-            }
         }
+    }
 
 
-    }    // End void Check_Voltages
+}    // End void Check_Voltages
 
 
 // ##################################################################################################################################################
 
 
 void Display_Warning_Text()
-    {
+{
 
 
     // =======================================================
@@ -1023,17 +1040,17 @@ void Display_Warning_Text()
     my_lcd.Set_Text_Size(4);
 
     if (Calibration_Mode)
-        {
+    {
         my_lcd.Set_Text_colour(LCD_WHITE);
         my_lcd.Set_Text_Back_colour(LCD_BLACK);
         itoa(Battery_Volts, reusable_string, 10);
         strcat(reusable_string, " V    ");
         my_lcd.Print_String(reusable_string, Status_Text_X, Status_Text_Y);
-        }
+    }
     else
-        {
+    {
         switch (Status_Priority)
-            {
+        {
             // start of the switch statement
             // in reverse order so highest priority is executed first
             case 6:
@@ -1093,11 +1110,11 @@ void Display_Warning_Text()
             default:
                 // dont do anything
                 break;
-            }    // the end of the switch statement.
-        }
+        }    // the end of the switch statement.
+    }
 
 
-    }    // end void Display_Warning_Text
+}    // end void Display_Warning_Text
 
 
 
@@ -1106,7 +1123,7 @@ void Display_Warning_Text()
 
 
 void ShiftLight_Strip()
-    {
+{
 
 
     // =======================================================
@@ -1118,50 +1135,50 @@ void ShiftLight_Strip()
 
     // Set low brightness if headlights are on
     if (Dim_Mode)
-        {
+    {
         strip.setBrightness(LED_Dim);
-        }
+    }
     else
-        {
+    {
         strip.setBrightness(LED_Bright);
-        }
+    }
 
     if (Demo_Mode)
-        {
+    {
         // ----------------- FOR TESTING ----------------
 
         if (Count_Up)
-            {
+        {
             RPM_LED_Pos = RPM_LED_Pos + 1;
             if (RPM_LED_Pos > LED_Count)
-                {
-                Count_Up = false;
-                }
-            }
-        if (!Count_Up)
             {
+                Count_Up = false;
+            }
+        }
+        if (!Count_Up)
+        {
             RPM_LED_Pos = RPM_LED_Pos - 1;
             if (RPM_LED_Pos < 0)
-                {
+            {
                 Count_Up = true;
-                }
             }
+        }
 
         //RPM_LED_Pos = random(-LED_Count, LED_Count);
         // ----------------------------------------------
-        }
+    }
     else
-        {
+    {
         // ------------------ FOR REAL ------------------
         // Read the serial input for number of LEDs to light
         // 0 = no LEDs lit
         // 1 -> {LED_Count} = number of LEDs lit
         if (Serial2.available() > 0)
-            {
+        {
             RPM_LED_Pos = Serial2.read();
-            }
-        // ----------------------------------------------
         }
+        // ----------------------------------------------
+    }
 
     RPM_LED_Pos = constrain(RPM_LED_Pos, 0, LED_Count);
 
@@ -1194,18 +1211,18 @@ void ShiftLight_Strip()
     // Display headlight status on the last LED
     //if (PL_CurrentStatus == HIGH || LB_CurrentStatus == HIGH)
     if (Light_Status > 1 && Light_Status < 4)
-        {
+    {
         // Low beam or Parkers
         // Set end LED to dark green
         strip.fill(0x009900, LED_Count - 1, 1);
-        }
+    }
     //if (HB_CurrentStatus == HIGH)
     if (Light_Status > 3)
-        {
+    {
         // High beam
         // Set end LED to dark blue
         strip.fill(0x000099, LED_Count - 1, 1);
-        }
+    }
 
     // Display any warnings on the last LED
     // using the same system as the text warnings
@@ -1220,7 +1237,7 @@ void ShiftLight_Strip()
     6 oil press alert
   */
     switch (Status_Priority)
-        {
+    {
         // start of the switch statement
         // in reverse order so highest priority is executed first
         case 6:
@@ -1276,13 +1293,13 @@ void ShiftLight_Strip()
         default:
             // do nothing
             break;
-        }    // the end of the switch statement.
+    }    // the end of the switch statement.
 
     // Send the updated pixel info to the hardware
     strip.show();
 
 
-    }    // end void ShiftLight_Strip
+}    // end void ShiftLight_Strip
 
 
 
@@ -1291,7 +1308,7 @@ void ShiftLight_Strip()
 
 
 void Headlight_Status()
-    {
+{
 
 
     // =======================================================
@@ -1311,7 +1328,7 @@ void Headlight_Status()
     // get all the current headlight inputs
     // the parker lights input is disabled during demo mode due to sensitivity
     if (Calibration_Mode)
-        {
+    {
         // ignore the digital inputs
         Light_Status = Lights_Off;
         my_lcd.Set_Draw_color(LCD_GREY);
@@ -1320,30 +1337,30 @@ void Headlight_Status()
         my_lcd.Set_Text_colour(LCD_WHITE);
         my_lcd.Set_Text_Back_colour(LCD_GREY);
         my_lcd.Print_String("CALIBR", Light_Status_X + 22, Light_Status_Y + 12);
-        }
+    }
     else
-        {
+    {
         // Get the light status from digital inputs
-        if (digitalRead(Parker_Light_Pin) == Digitial_Input_Active)
-            {
+        if (debounce(Parker_Light_Pin) == Digitial_Input_Active)
+        {
             Light_Status = Lights_Park;
-            }
+        }
         else
-            {
+        {
             // cant have any lights on at all without the parker lights being on
             Light_Status = Lights_Off;
-            }
-        if (digitalRead(Low_Beam_Pin) == Digitial_Input_Active)
+        }
+        if (debounce(Low_Beam_Pin) == Digitial_Input_Active)
             Light_Status = Lights_Low;
-        if (digitalRead(High_Beam_Pin) == Digitial_Input_Active)
+        if (debounce(High_Beam_Pin) == Digitial_Input_Active)
             Light_Status = Lights_High;
 
         // Draw the lights indicator
         // Only overwrite it if there has been a change
         if (Light_Status != Light_Last_Status)
-            {
+        {
             switch (Light_Status)
-                {    // start of the switch statement
+            {    // start of the switch statement
                 case Lights_NotChanged:
                     // do nothing
                     break;
@@ -1382,13 +1399,13 @@ void Headlight_Status()
                 default:
                     // do nothing
                     break;
-                }    // the end of the switch statement.
-            }        // end of light status changed
+            }    // the end of the switch statement.
+        }        // end of light status changed
         Light_Last_Status = Light_Status;
-        }    // end of calibration mode choice
+    }    // end of calibration mode choice
 
 
-    }    // end void Headlight_Status
+}    // end void Headlight_Status
 
 
 // ##################################################################################################################################################
@@ -1396,7 +1413,7 @@ void Headlight_Status()
 
 
 void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte scheme)
-    {
+{
 
     /*
     const int Bar_Height = 200;
@@ -1411,10 +1428,10 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
     int y2 = y - Bar_Height;
 
     if (!Dim_Mode)
-        {
+    {
         // Choose colour from scheme
         switch (scheme)
-            {
+        {
             case 0: block_colour = LCD_RED; break;                                     // Fixed colour
             case 1: block_colour = LCD_GREEN; break;                                   // Fixed colour
             case 2: block_colour = LCD_BLUE; break;                                    // Fixed colour
@@ -1423,12 +1440,12 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
             case 5: block_colour = rainbow(map(value, vmin, vmax, 127, 63)); break;    // Red to green
             case 6: block_colour = rainbow(map(value, vmin, vmax, 127, 0)); break;     // Red to blue
             default: block_colour = LCD_BLUE; break;                                   // Fixed colour
-            }
         }
+    }
     else
-        {
+    {
         block_colour = Text_Colour2;
-        }
+    }
 
     // Fill in coloured blocks
     my_lcd.Set_Draw_color(block_colour);
@@ -1440,7 +1457,18 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
     my_lcd.Fill_Rectangle(x, y1, x + w, y2);
 
 
-    }    // End void barmeter
+}    // End void barmeter
+
+
+// #########################################################################
+
+
+bool debounce(int switch_pin)
+{
+    static uint16_t state = 0;
+    state                 = (state << 1) | digitalRead(switch_pin) | debounce_test;
+    return (state == debounce_result);
+}
 
 
 // #########################################################################
@@ -1449,7 +1477,7 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
 // Function to return a 16 bit rainbow colour
 
 unsigned int rainbow(byte value)
-    {
+{
     // Value is expected to be in range 0-127
     // The value is converted to a spectrum colour from 0 = blue through to 127 = red
 
@@ -1460,31 +1488,31 @@ unsigned int rainbow(byte value)
     byte quadrant = value / 32;
 
     if (quadrant == 0)
-        {
+    {
         blue  = 31;
         green = 2 * (value % 32);
         red   = 0;
-        }
+    }
     if (quadrant == 1)
-        {
+    {
         blue  = 31 - (value % 32);
         green = 63;
         red   = 0;
-        }
+    }
     if (quadrant == 2)
-        {
+    {
         blue  = 0;
         green = 63;
         red   = value % 32;
-        }
+    }
     if (quadrant == 3)
-        {
+    {
         blue  = 0;
         green = 63 - 2 * (value % 32);
         red   = 31;
-        }
-    return (red << 11) + (green << 5) + blue;
     }
+    return (red << 11) + (green << 5) + blue;
+}
 
 
 // ##################################################################################################################################################
