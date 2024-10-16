@@ -44,7 +44,7 @@
 //========================================================================
 
 // set true for using Onewire DS18B20 temperature sensor
-const bool  Use_DS18B20           = true;
+const bool  Use_DS18B20           = false;
 
 int         Fan_On_Hyst           = 20000;    // msec Hysteresis, minimum run time of fan
 const int   Fan_On_Temp           = 90;       // degrees C fan on
@@ -56,18 +56,21 @@ const float Volts_High            = 14.4;     // high volts warning level
 
 const bool  Valid_Warning         = LOW;     // set high or low for valid warnings to be passed to external processing
 const bool  Fan_On                = HIGH;    // set high or low for operating the fan relay
-const bool  Digitial_Input_Active = LOW;    // set whether digitial inputs are Low or High for active
+const bool  Digitial_Input_Active = LOW;     // set whether digitial inputs are Low or High for active
 
 // Set these to ensure correct voltage readings of analog inputs
-const float vcc_ref = 4.92;       // measure the 5 volts DC and set it here
-const float R1      = 15000.0;    // measure and set the voltage divider values
-const float R2      = 33000.0;    // for accurate voltage measurements
+const float vcc_ref  = 4.92;       // measure the 5 volts DC and set it here
+const float R1       = 15000.0;    // measure and set the voltage divider values
+const float R2       = 39000.0;    // for accurate voltage measurements
 
 // The range of RPM on the neopixel strip is dictated by the output from the RPM module
 // set the length of the NeoPixel shiftlight strip
-const int LED_Count  = 8;
-const int LED_Dim    = 10;
-const int LED_Bright = 80;
+const int LED_Count       = 8;
+const int LED_Dim         = 10;
+const int LED_Bright      = 80;
+
+const int Sensor_Readings = 5;    // number of repeated sensor readings to average
+const int Sensor_Delay    = 5;    // delay between repeated sensor readings
 
 //========================================================================
 
@@ -81,7 +84,7 @@ const int LED_Bright = 80;
 // Calibration = true displays some calculated and raw values
 // Pressing the button changes to Caibration mode
 bool Calibration_Mode = false;
-bool Demo_Mode        = true;
+bool Demo_Mode        = false;
 bool Debug_Mode       = false;
 
 //========================================================================
@@ -232,19 +235,14 @@ const int SD_Select = 53;
 
 // Pin definitions for digital inputs
 // Mega2560 Serial2 pins 17(RX), 16(TX)
-const int Oil_Press_Pin    = 0;    // Oil pressure digital input pin
-const int Parker_Light_Pin = 1;    // Parker lights digital input pin
-const int Low_Beam_Pin     = 2;    // Low beam digital input pin
-const int High_Beam_Pin    = 3;    // High beam digital input pin
-const int Pbrake_Input_Pin = 4;    // Park brake input pin
-const int VSS_Input_Pin    = 5;    // Speed frequency input pin
-const int RPM_Input_Pin    = 6;    // RPM frequency INPUT pin
-const int Button_Pin       = 7;    // Button momentary input
-
-// Used in the debounce routine
-int switch_pin;
-int debounce_test;
-int debounce_result;
+const int Button_Pin       = 0;    // Button momentary input
+const int Pbrake_Input_Pin = 1;    // Park brake input pin
+const int Oil_Press_Pin    = 2;    // Oil pressure digital input pin, needs to be 2 or 3 for ISR
+const int Parker_Light_Pin = 3;    // Parker lights digital input pin
+const int Low_Beam_Pin     = 4;    // Low beam digital input pin
+const int High_Beam_Pin    = 5;    // High beam digital input pin
+const int VSS_Input_Pin    = 6;    // Speed frequency input pin
+const int RPM_Input_Pin    = 7;    // RPM frequency INPUT pin
 
 // Pin definitions for analog inputs
 const int Temp_Pin       = A0;    // Temperature analog input pin - OneWire sensor on pin 14
@@ -274,10 +272,12 @@ Adafruit_NeoPixel strip(LED_Count, LED_Pin, NEO_GRB + NEO_KHZ800);
 LCDWIKI_KBV my_lcd(ILI9481, 40, 38, 39, -1, 41);    //model,cs,cd,wr,rd,reset
 
 // Input variables
+float Sensor_Average;
 int   Temp_Celsius, Fuel_Litres, Last_Fuel_Litres;
 float Battery_Volts, Alternator_Volts;
 int   Raw_Battery_Volts, Raw_Alternator_Volts;
 int   Raw_Value;
+int   i;    // used in for loops
 
 // Headligh Indicator status
 // variables for state machine
@@ -291,12 +291,12 @@ int       Light_Status      = Lights_Off;
 int       Light_Last_Status = Lights_High;
 
 // Event timing and status
-const uint32_t Long_Loop_Interval  = 4000;    // 4 seconds between linear bar meter updates
-const uint32_t Short_Loop_Interval = 1000;    // 1 second between more important loops
-uint32_t       Long_Loop_Time, Short_Loop_Time;
-uint32_t       Fan_On_Time, Status_Change_Time;
-bool           Startup_Mode    = true;
-bool           Missing_DS18B20 = false;
+const uint32_t    Long_Loop_Interval  = 4000;    // 4 seconds between linear bar meter updates
+const uint32_t    Short_Loop_Interval = 1000;    // 1 second between more important loops
+uint32_t          Long_Loop_Time, Short_Loop_Time, Fan_On_Time;
+volatile uint32_t Status_Change_Time;
+bool              Startup_Mode    = true;
+bool              Missing_DS18B20 = false;
 
 // Position of entire display area
 const int LCD_Offset_X = 40;
@@ -309,10 +309,10 @@ const int Light_Status_Length = 180;
 const int Light_Status_Height = 50;
 
 // Position of Status text
-const int Status_Text_X   = LCD_Offset_X + 22;
-const int Status_Text_Y   = LCD_Offset_Y + 300;
-char      Status_Text[20] = "ComingReadyOrNot";    // a long string so we never overflow
-int       Status_Priority = 0;
+const int    Status_Text_X   = LCD_Offset_X + 22;
+const int    Status_Text_Y   = LCD_Offset_Y + 300;
+char         Status_Text[20] = "ComingReadyOrNot";    // a long string so we never overflow
+volatile int Status_Priority = 0;
 
 // Meter variables
 // bar X and Y are from bottom left of each bar
@@ -492,25 +492,13 @@ void setup()
     }
     strip.clear();
 
-    // Assign the switch debounce polarity
-    // for low active 0xfe00  and 0xff00
-    // for high active 0x01ff and 0x00ff
-    if (Digitial_Input_Active == HIGH)
-    {
-        debounce_test   = 0x01ff;
-        debounce_result = 0x00ff;
-    }
-    else
-    {
-        debounce_test   = 0xfe00;
-        debounce_result = 0xff00;
-    }
-
-    // Check - cant have both modes at once
+    // Check calibration or demo mode status - cant have both modes at once
     if (Calibration_Mode)
         Demo_Mode = false;
     if (Demo_Mode)
         Fan_On_Hyst = Fan_On_Hyst / 3;
+
+    //attachInterrupt(digitalPinToInterrupt(Oil_Press_Pin), Check_Oil, RISING);
 
     Long_Loop_Time  = millis();
     Short_Loop_Time = millis();
@@ -565,6 +553,7 @@ void loop()
         Update_Fuel();
         Update_Temperature();
         Update_Dim_Status();
+        // Only operate the fan in normal mode
         if (!Calibration_Mode)
             Control_Fan();
 
@@ -595,9 +584,9 @@ void Check_Button()
     // delay allows for debounce
     if (!Startup_Mode)
     {
-        if (debounce(Button_Pin) == Digitial_Input_Active)
+        if (digitalRead(Button_Pin) == Digitial_Input_Active)
         {
-            while (debounce(Button_Pin) == Digitial_Input_Active)
+            while (digitalRead(Button_Pin) == Digitial_Input_Active)
             {
                 // just wait until button released
                 Calibration_Mode = true;
@@ -653,7 +642,7 @@ void Check_Oil()
     // Process the oil pressure here
     // =======================================================
 
-    if (debounce(Oil_Press_Pin) == Digitial_Input_Active)
+    if (digitalRead(Oil_Press_Pin) == Digitial_Input_Active)
     {
         Status_Priority    = 6;
         Status_Change_Time = millis();
@@ -683,7 +672,7 @@ void Update_Fuel()
     // =======================================================
 
     // Read the analog pin
-    Raw_Value = analogRead(Fuel_Pin);
+    Raw_Value = Get_Sensor_Val(Fuel_Pin);
 
     if (Calibration_Mode)
     // show raw calibration values
@@ -800,7 +789,7 @@ void Update_Temperature()
     {
         // Using any other sensor
         // Read the analog pin
-        Raw_Value = analogRead(Temp_Pin);
+        Raw_Value = Get_Sensor_Val(Temp_Pin);
     }
 
     if (Calibration_Mode)
@@ -961,8 +950,8 @@ void Check_Voltages()
 
     // Read analog pins
     // do a read and ignore it, allowing the true value to settle
-    Raw_Battery_Volts    = analogRead(Batt_Volt_Pin);
-    Raw_Alternator_Volts = analogRead(Alternator_Pin);
+    Raw_Battery_Volts    = Get_Sensor_Val(Batt_Volt_Pin);
+    Raw_Alternator_Volts = Get_Sensor_Val(Alternator_Pin);
 
     // Use raw calibration values
     if (Calibration_Mode)
@@ -980,11 +969,11 @@ void Check_Voltages()
     if (!Demo_Mode && !Calibration_Mode)
     {
         // ----------------- FOR REAL -----------------
-        Battery_Volts    = Raw_Battery_Volts * Input_Multiplier;
-        Alternator_Volts = Raw_Alternator_Volts * Input_Multiplier;
+        Battery_Volts    = float(Raw_Battery_Volts) * Input_Multiplier;
+        Alternator_Volts = float(Raw_Alternator_Volts) * Input_Multiplier;
         // -----------------------------------------------
-        Battery_Volts    = constrain(Battery_Volts, 8.0, 16.0);
-        Alternator_Volts = constrain(Alternator_Volts, 6.0, 16.0);
+        Battery_Volts    = constrain(Battery_Volts, 5.0, 18.0);
+        Alternator_Volts = constrain(Alternator_Volts, 5.0, 18.0);
     }
 
 
@@ -1341,7 +1330,7 @@ void Headlight_Status()
     else
     {
         // Get the light status from digital inputs
-        if (debounce(Parker_Light_Pin) == Digitial_Input_Active)
+        if (digitalRead(Parker_Light_Pin) == Digitial_Input_Active)
         {
             Light_Status = Lights_Park;
         }
@@ -1350,9 +1339,9 @@ void Headlight_Status()
             // cant have any lights on at all without the parker lights being on
             Light_Status = Lights_Off;
         }
-        if (debounce(Low_Beam_Pin) == Digitial_Input_Active)
+        if (digitalRead(Low_Beam_Pin) == Digitial_Input_Active)
             Light_Status = Lights_Low;
-        if (debounce(High_Beam_Pin) == Digitial_Input_Active)
+        if (digitalRead(High_Beam_Pin) == Digitial_Input_Active)
             Light_Status = Lights_High;
 
         // Draw the lights indicator
@@ -1463,18 +1452,25 @@ void Bar_Meter(int value, int vmin, int vmax, int x, int y, int w, int h, byte s
 // #########################################################################
 
 
-bool debounce(int switch_pin)
+int Get_Sensor_Val(byte Sensor_Pin)
 {
-    static uint16_t state = 0;
-    state                 = (state << 1) | digitalRead(switch_pin) | debounce_test;
-    return (state == debounce_result);
-}
+
+    // Arithmetic average
+    Sensor_Average = 0;
+    for (i = 1; i <= Sensor_Readings; i++)
+    {
+        Sensor_Average += analogRead(Sensor_Pin);
+        delay(Sensor_Delay);
+    }
+    Sensor_Average = Sensor_Average / float(Sensor_Readings);
+
+    return int(Sensor_Average + 0.5);
+
+}    // end void Get_Sensor_Val
 
 
-// #########################################################################
+// ##########################################################################
 
-
-// Function to return a 16 bit rainbow colour
 
 unsigned int rainbow(byte value)
 {
